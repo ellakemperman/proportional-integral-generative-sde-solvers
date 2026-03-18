@@ -1,9 +1,8 @@
 """Definitions of solvers"""
-
-from abc import abstractmethod, ABC
-from sde import SDE
-import torch
 from itertools import pairwise
+from abc import abstractmethod, ABC
+import torch
+from sde import SDE
 
 
 class Solver(ABC):
@@ -14,10 +13,6 @@ class Solver(ABC):
     @property
     def sde(self):
         return self.__sde
-
-    def step_helper(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor) -> torch.Tensor:
-        drift, diffusion = self.sde(x, t)
-        return x + drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
 
     @abstractmethod
     def solve(self, x: torch.tensor) -> torch.tensor:
@@ -45,4 +40,4 @@ class EulerMarayumaSolver(Solver):
 
     def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor) -> torch.tensor:
         noise = torch.randn_like(x)
-        return self.step_helper(x, t, dt, noise)
+        return self.sde.step(x, t, dt, noise)
