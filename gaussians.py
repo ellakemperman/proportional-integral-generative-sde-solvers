@@ -6,12 +6,16 @@ from sde import LinearDriftSDE
 
 class Gaussian:
 
-    def __init__(self, mu: torch.Tensor, sigma: torch.Tensor, norm: torch.Tensor = None):
+    def __init__(self, mu: torch.Tensor | float, sigma: torch.Tensor | float, norm: torch.Tensor | float = None , weight: torch.Tensor | float = None):
         self._mu = mu
         self._sigma = sigma
         self._norm = norm
         if not self._norm:
-            self._norm = torch.Tensor(1 / (sigma * math.sqrt(2 * math.pi)))
+            self._norm = 1 / (sigma * math.sqrt(2 * math.pi))
+
+            if weight:
+                self._norm *= weight
+
 
     @property
     def mu(self):
@@ -53,7 +57,7 @@ class MultiGaussian:
 
         for gaussian in self._gaussians:
             mu_new = gaussian.mu * alpha_t
-            sigma_new = torch.sqrt(torch.square(alpha_t) * torch.square(gaussian.sigma) + torch.square(sigma_t))
+            sigma_new = torch.sqrt(alpha_t**2 * gaussian.sigma**2 + sigma_t**2)
             convolved_gaussians.append(Gaussian(mu_new, sigma_new, gaussian.norm))
 
         return tuple(convolved_gaussians)

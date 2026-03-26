@@ -2,7 +2,7 @@
 from itertools import pairwise
 from abc import abstractmethod, ABC
 import torch
-from sde import SDE
+from sde import SDE, LinearDriftSDE
 
 
 class Solver(ABC):
@@ -25,7 +25,7 @@ class Solver(ABC):
 
 class EulerMarayumaSolver(Solver):
 
-    def __init__(self, sde: SDE, discretisation: torch.tensor):
+    def __init__(self, sde: SDE, discretisation: torch.Tensor):
         super().__init__(sde)
 
         self._discretisation = discretisation

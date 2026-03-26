@@ -44,7 +44,7 @@ class SDE(ABC):
                   needs to be added.
         :return: x + dx
         """
-        if not w:
+        if w is None:
             w = torch.randn_like(x)
         drift, diffusion = self.sde(x, t)
         return x + drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
@@ -83,12 +83,18 @@ class SDE(ABC):
         # include the score
         class ReverseSDE(parent.__class__):
             """A reversed SDE."""
+            def __init__(self):
+                self._parent = parent
+
+            @property
+            def parent(self):
+                return parent
 
             def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-                return parent.drift(x, t) - torch.square(parent.diffusion(t)) * score_fn(x, t)
+                return self.parent.drift(x, t) - torch.square(self.parent.diffusion(t)) * score_fn(x, t)
 
             def diffusion(self, t: torch.Tensor) -> torch.Tensor:
-                return parent.diffusion(t)
+                return self.parent.diffusion(t)
 
         return ReverseSDE()
 
