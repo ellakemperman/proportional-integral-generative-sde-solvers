@@ -25,7 +25,7 @@ if __name__ == "__main__":
     )
 
     gaussian3 = gaussians.Gaussian(
-        mu=5,
+        mu=15,
         sigma=1,
         weight=1/3
     )
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     score_func = multi_gaussian.get_score_function()
 
     # Computing function over interval
-    interval = torch.linspace(-10, 10, 10000)
+    interval = torch.linspace(-10, 20, 10000)
     verification = multi_gaussian(interval)
 
     reverse_sde = sde.get_reverse_sde(score_func)
@@ -54,6 +54,8 @@ if __name__ == "__main__":
 
     # Plotting
     plt.figure()
-    plt.hist(x, bins=100, density=True)
-    plt.plot(interval, verification, c="r")
+    plt.hist(x, bins=1000, density=True, label="Sampled")
+    plt.plot(interval, verification, c="r", label="True Multimodal Gaussian")
+    plt.legend()
+    plt.title("Euler Marayuma solver transforming to a multimodal Gaussian")
     plt.show()
