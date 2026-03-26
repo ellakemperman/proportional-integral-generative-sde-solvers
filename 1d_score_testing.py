@@ -14,18 +14,28 @@ if __name__ == "__main__":
 
     # Gaussian & score setup
     gaussian1 = gaussians.Gaussian(
-        mu=2,
+        mu=0,
         sigma=1,
-        weight=0.5
+        weight=1/3
     )
     gaussian2 = gaussians.Gaussian(
-        mu=-2,
+        mu=-5,
         sigma=1,
-        weight=0.5
+        weight=1/3
     )
 
-    multi_gaussian = gaussians.MultiGaussian((gaussian1, gaussian2), sde)
+    gaussian3 = gaussians.Gaussian(
+        mu=5,
+        sigma=1,
+        weight=1/3
+    )
+
+    multi_gaussian = gaussians.MultiGaussian((gaussian1, gaussian2, gaussian3), sde)
     score_func = multi_gaussian.get_score_function()
+
+    # Computing function over interval
+    interval = torch.linspace(-10, 10, 10000)
+    verification = multi_gaussian(interval)
 
     reverse_sde = sde.get_reverse_sde(score_func)
 
@@ -42,6 +52,8 @@ if __name__ == "__main__":
     x_start = torch.randn(n_samples)
     x = solver.solve(x_start)
 
+    # Plotting
     plt.figure()
     plt.hist(x, bins=100, density=True)
+    plt.plot(interval, verification, c="r")
     plt.show()

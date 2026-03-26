@@ -42,6 +42,12 @@ class MultiGaussian:
         self._gaussians = gaussians
         self._sde = sde
 
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        total = torch.zeros(x.shape)
+        for gaussian in self._gaussians:
+            total += gaussian(x)
+        return total
+
     def get_score_function(self) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
         return self.score
 
