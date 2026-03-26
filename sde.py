@@ -108,7 +108,7 @@ class LinearDriftSDE(SDE, ABC):
         :param t: The time
         :return: A tuple of (mu, sigma), representing the mean and standard deviation of the sample.
         """
-        return self._mu(x, t), self._sigma(t)
+        return self.mu(x, t), self.sigma(t)
 
     def sample_noise(self, x: torch.Tensor, t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         r"""
@@ -133,11 +133,11 @@ class LinearDriftSDE(SDE, ABC):
         return self.sample_noise(x, t)[0]
 
     @abstractmethod
-    def _mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         pass
 
     @abstractmethod
-    def _sigma(self, t: torch.Tensor) -> torch.Tensor:
+    def sigma(self, t: torch.Tensor) -> torch.Tensor:
         pass
 
 
@@ -152,11 +152,11 @@ class VarianceExplodingSDE(LinearDriftSDE):
         self._sigma_min = torch.Tensor(sigma_min)
         self._sigma_max = torch.Tensor(sigma_max)
 
-    def _sigma(self, t: torch.Tensor) -> torch.Tensor:
+    def sigma(self, t: torch.Tensor) -> torch.Tensor:
         return torch.square(self._sigma_min * (self._sigma_max / self._sigma_min) ** t)
 
-    def _mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        return x
+    def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        return torch.ones(1)
 
     def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         return torch.zeros(x.shape)
@@ -164,5 +164,41 @@ class VarianceExplodingSDE(LinearDriftSDE):
     def diffusion(self, t: torch.Tensor) -> torch.Tensor:
         # Compute derivative of sigma^2
         # ds^2(t)/dt = 2 * s^2(t) * (ln(s_max) - ln(s_min))
-        dsigma_dt = 2 * torch.sqrt(self._sigma(t)) * (torch.log(self._sigma_max) - torch.log(self._sigma_min))
+        dsigma_dt = 2 * torch.sqrt(self.sigma(t)) * (torch.log(self._sigma_max) - torch.log(self._sigma_min))
         return torch.sqrt(dsigma_dt)
+
+
+class VariancePreservingSDE(LinearDriftSDE, ABC):
+
+    def sigma(self, t: torch.Tensor) -> torch.Tensor:
+        return 1 - torch.exp(-self._B(t))
+
+    def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        return torch.exp(-0.5 * self._B(t))
+
+    def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        return -0.5 * self._beta(t) * x
+
+    def diffusion(self, t: torch.Tensor) -> torch.Tensor:
+        return torch.sqrt(self._beta(t))
+
+    @abstractmethod
+    def _beta(self, t: torch.Tensor) -> torch.Tensor:
+        pass
+
+    @abstractmethod
+    def _B(self, t: torch.Tensor) -> torch.Tensor:
+        pass
+
+
+class LinearVariancePreservingSDE(VariancePreservingSDE):
+
+    def __init__(self, beta_min: float, beta_max: float):
+        self._beta_min = beta_min
+        self._beta_max = beta_max
+
+    def _beta(self, t: torch.Tensor) -> torch.Tensor:
+        return self._beta_min + t * (self._beta_max - self._beta_min)
+
+    def _B(self, t: torch.Tensor) -> torch.Tensor:
+        return self._beta_min * t + 0.5 * torch.square(t) * (self._beta_max - self._beta_min)
