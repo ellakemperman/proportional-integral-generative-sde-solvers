@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import solver
 import sde
@@ -18,18 +19,18 @@ if __name__ == "__main__":
     gaussian1 = gaussians.Gaussian(
         mu=0,
         sigma=1,
-        weight=1/3
+        weight=1/8
     )
     gaussian2 = gaussians.Gaussian(
         mu=-5,
         sigma=1,
-        weight=1/3
+        weight=3/8
     )
 
     gaussian3 = gaussians.Gaussian(
         mu=15,
         sigma=1,
-        weight=1/3
+        weight=1/2
     )
 
     multi_gaussian = gaussians.MultiGaussian((gaussian1, gaussian2, gaussian3), sde)
@@ -42,22 +43,24 @@ if __name__ == "__main__":
     reverse_sde = sde.get_reverse_sde(score_func)
 
     # Solver setup
-    n_steps = 25
+    n_steps = 1000
     discretisation = torch.linspace(1, 0, n_steps)
     # solver_ = solver.EulerMarayumaSolver(reverse_sde, discretisation)
     solver_ = solver.PISolver(reverse_sde, ki=0.101, kp=0.09, tau=1, alpha=0.8, h_start=0.04, max_decrease=0.7, max_increase=1.3)
 
     # Results gathering
-    n_samples = 100000
+    n_samples = 1000000
     mu, sigma = 0, 1
 
     mu, sigma = torch.full((n_samples,), mu), torch.full((n_samples,), sigma)
     x_start = torch.randn((n_samples, 1))
+    multi_gaussian.x_0 = x_start
+
     x = solver_.solve(x_start)
 
     # Plotting
     plt.figure()
-    plt.hist(x, bins=200, density=True, label="Sampled")
+    sns.kdeplot(x, label="Sampled", multiple="stack")
     plt.plot(interval, verification, c="r", label="True Multimodal Gaussian")
     plt.legend()
     plt.title("PI Adaptive solver transforming to a multimodal Gaussian")
