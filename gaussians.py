@@ -59,7 +59,7 @@ class Gaussian:
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         r"""
-        Computes the probability density of the Gausian at points x.
+        Computes the probability density of the Gaussian at points x.
 
         :param x: Points for which to compute the score, a tensor of shape (batch_size, 1)
         :return: :math:`ce^{-\frac{(x - \mu)^2}{2\sigma^2}}`
@@ -88,6 +88,9 @@ class MultiGaussian:
     @property
     def nfe(self) -> int:
         return self._nfe
+
+    def reset_nfe(self):
+        self._nfe = 0
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         r"""

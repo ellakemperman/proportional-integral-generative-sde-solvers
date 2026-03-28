@@ -115,7 +115,6 @@ class PISolver(Solver):
 
     def solve(self, x: torch.tensor) -> torch.tensor:
         t = torch.full((x.shape[0], 1), self._start_time)  # Initialise batch_size times, starting at 1
-        print(t.dtype)
         h = torch.full((x.shape[0], 1), self._h_start)
         error = torch.full((x.shape[0], 1), 0.5)
         end_condition = torch.full((x.shape[0], 1), self._end_time)
