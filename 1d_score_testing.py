@@ -6,6 +6,8 @@ import gaussians
 
 
 if __name__ == "__main__":
+    torch.manual_seed(42)
+
     # Setup
     # SDE Setup
     beta_min = 0.1
@@ -40,10 +42,10 @@ if __name__ == "__main__":
     reverse_sde = sde.get_reverse_sde(score_func)
 
     # Solver setup
-    n_steps = 1000
+    n_steps = 25
     discretisation = torch.linspace(1, 0, n_steps)
     # solver_ = solver.EulerMarayumaSolver(reverse_sde, discretisation)
-    solver_ = solver.PISolver(reverse_sde, ki=0.101, kp=0.09, tau=0.5, alpha=0.5, h_start=-0.01, max_decrease=0.7, max_increase=1.3)
+    solver_ = solver.PISolver(reverse_sde, ki=0.101, kp=0.09, tau=0.3, alpha=0.5, h_start=-0.04, max_decrease=0.7, max_increase=1.3)
 
     # Results gathering
     n_samples = 100000
@@ -60,3 +62,5 @@ if __name__ == "__main__":
     plt.legend()
     plt.title("PI Adaptive solver transforming to a multimodal Gaussian")
     plt.show()
+
+    print(multi_gaussian.nfe)

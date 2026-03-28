@@ -49,6 +49,11 @@ class MultiGaussian:
     def __init__(self, gaussians: tuple[Gaussian, ...], sde: LinearDriftSDE):
         self._gaussians = gaussians
         self._sde = sde
+        self._nfe = 0
+
+    @property
+    def nfe(self):
+        return self._nfe
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         total = torch.zeros(x.shape)
@@ -60,6 +65,7 @@ class MultiGaussian:
         return self.score
 
     def score(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        self._nfe += x.shape[0]
         convolved_gaussians = self.convolve_gaussians(x, t)
         non_normalised_score = sum(map(lambda gaussian: gaussian.score(x) * gaussian(x), convolved_gaussians))
         normalisation = sum(map(lambda gaussian: gaussian(x), convolved_gaussians))

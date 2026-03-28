@@ -70,8 +70,13 @@ class PISolver(Solver):
             i = 0
             reject_count = 0
             not_reject_count = 0
+            x_full, t_full, h_full = x, t, h
 
-            while torch.any(not_finished := (t != end_condition)):
+            while torch.any(not_finished := (t_full != end_condition)):
+                not_finished = not_finished.reshape(-1)
+                # Work with the unfinished subset of x, t, h
+                x, t, h = x_full[not_finished], t_full[not_finished], h_full[not_finished]
+
                 w = torch.randn_like(x)
                 dx_euler = self.sde.step(x, t, h, w)
                 dx_heun = self.sde.step(x + dx_euler, t + h, h, w)
@@ -79,11 +84,11 @@ class PISolver(Solver):
                 x_first = x + dx_euler
                 x_second = x + 0.5 * (dx_euler + dx_heun)
 
-                old_error = error
-                error = self._error(x_first, x_second)
+                old_error = error.clone()
+                error[not_finished] = self._error(x_first, x_second)
 
                 # Update x and t
-                not_rejected = error < 1
+                not_rejected = error[not_finished] < 1
                 x[not_rejected] = x_second[not_rejected]
                 t[not_rejected] = t[not_rejected] + h[not_rejected]
 
@@ -91,16 +96,20 @@ class PISolver(Solver):
                 not_reject_count += torch.sum(not_rejected)
 
                 # Get next step size
-                h = self._get_next_step(error, old_error, h)
+                h = self._get_next_step(error[not_finished], old_error[not_finished], h)
 
                 # Bound steps such that no step exceeding end condition will be taken
-                h = torch.maximum(h, end_condition - t)
+                h = torch.maximum(h, end_condition[not_finished] - t)
+
+                x_full[not_finished], t_full[not_finished], h_full[not_finished] = x, t, h
 
                 i += 1
+                print((h.isnan()).nonzero())
+                print(i)
 
             print(reject_count / (reject_count + not_reject_count))
             print(i)
-            return x
+            return x_full
 
         def _error(self, x_first: torch.Tensor, x_second: torch.Tensor):
             d = sum(x_first.shape[1:])
@@ -109,5 +118,4 @@ class PISolver(Solver):
         def _get_next_step(self, error: torch.Tensor, error_previous, h: torch.Tensor) -> torch.Tensor:
             integral = (self._alpha * self._tau / error)**(self._ki + self._kp)
             proportional = (error_previous / (self._alpha * self._tau))**self._kp
-            # Potentially bound h between two factors
             return h * torch.min(self._max_increase, torch.max(self._max_decrease, integral * proportional))
