@@ -34,28 +34,29 @@ if __name__ == "__main__":
     score_func = multi_gaussian.get_score_function()
 
     # Computing function over interval
-    interval = torch.linspace(-10, 20, 10000)
+    interval = torch.linspace(-10, 20, 10000).reshape((10000, 1))
     verification = multi_gaussian(interval)
 
     reverse_sde = sde.get_reverse_sde(score_func)
 
     # Solver setup
-    n_steps = 100
+    n_steps = 1000
     discretisation = torch.linspace(1, 0, n_steps)
-    solver = solver.EulerMarayumaSolver(reverse_sde, discretisation)
+    # solver_ = solver.EulerMarayumaSolver(reverse_sde, discretisation)
+    solver_ = solver.PISolver(reverse_sde, ki=0.101, kp=0.09, tau=0.5, alpha=0.5, h_start=-0.01, max_decrease=0.7, max_increase=1.3)
 
     # Results gathering
     n_samples = 100000
     mu, sigma = 0, 1
 
     mu, sigma = torch.full((n_samples,), mu), torch.full((n_samples,), sigma)
-    x_start = torch.randn(n_samples)
-    x = solver.solve(x_start)
+    x_start = torch.randn((n_samples, 1))
+    x = solver_.solve(x_start)
 
     # Plotting
     plt.figure()
     plt.hist(x, bins=1000, density=True, label="Sampled")
     plt.plot(interval, verification, c="r", label="True Multimodal Gaussian")
     plt.legend()
-    plt.title("Euler Marayuma solver transforming to a multimodal Gaussian")
+    plt.title("PI Adaptive solver transforming to a multimodal Gaussian")
     plt.show()

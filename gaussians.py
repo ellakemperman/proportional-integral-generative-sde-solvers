@@ -6,9 +6,17 @@ from sde import LinearDriftSDE
 
 class Gaussian:
 
-    def __init__(self, mu: torch.Tensor | float, sigma: torch.Tensor | float, norm: torch.Tensor | float = None , weight: torch.Tensor | float = None):
-        self._mu = mu
-        self._sigma = sigma
+    def __init__(self, mu: torch.Tensor | float, sigma: torch.Tensor | float, norm: float = None , weight: float = None):
+        if type(mu) != torch.Tensor:
+            self._mu = torch.Tensor([mu])
+        else:
+            self._mu = mu
+
+        if type(sigma) != torch.Tensor:
+            self._sigma = torch.Tensor([sigma])
+        else:
+            self._sigma = sigma
+
         self._norm = norm
         if not self._norm:
             self._norm = 1 / (sigma * math.sqrt(2 * math.pi))

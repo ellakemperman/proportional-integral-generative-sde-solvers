@@ -47,7 +47,7 @@ class SDE(ABC):
         if w is None:
             w = torch.randn_like(x)
         drift, diffusion = self.sde(x, t)
-        return x + drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
+        return drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
 
     @abstractmethod
     def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
