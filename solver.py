@@ -40,7 +40,7 @@ class EulerMarayumaSolver(Solver):
     """
 
     def __init__(self, sde: SDE, discretisation: torch.Tensor):
-        """
+        r"""
         Constructs the EulerMarayuma Solver
 
         :param sde: The SDE the solver will have to solve.
@@ -88,7 +88,7 @@ class PISolver(Solver):
                  max_decrease: float,
                  interval: tuple[float, float] = (1, 0)
                  ):
-        """
+        r"""
         Constructs the PISolver.
 
         :param sde: The SDE the solver will have to solve.

@@ -16,8 +16,8 @@ class SDE(ABC):
         Returns the Ito parameters of the SDE for a given sample and time. The SDE is defined by the drift f(t) and
         the diffusion g(t).
 
-        :param x: The given sample.
-        :param t: The given time.
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        :param t: The given time, a tensor of shape (batch_size, 1)
         :return: A tuple of (drift, diffusion)
         """
         return self.drift(x, t), self.diffusion(t)
@@ -27,9 +27,9 @@ class SDE(ABC):
         Returns the Ito parameters of the SDE for a given sample and time. The SDE is defined by the drift f(t) and
         the diffusion g(t).
 
-        :param x: The given sample.
-        :param t: The given time.
-        :return: A tuple of (drift, diffusion)
+        :param x: The given sample, a tensor of shape (batch_size, d).
+        :param t: The given time, a tensor of shape (batch_size, 1).
+        :return: A tuple of (drift, diffusion), with shapes (batch_size, d) and (batch_size, 1).
         """
         return self.sde(x, t)
 
@@ -37,12 +37,12 @@ class SDE(ABC):
         r"""
         Takes a step of size dt.
 
-        :param x: The x value at time t
-        :param t: The time
-        :param dt: The step size
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        :param t: The given time, a tensor of shape (batch_size, 1)
+        :param dt: The step size, a tensor of shape (batch_size, 1)
         :param w: The noise added. By default, this is set to :math:`\mathcal{N}(0, I)`. Provide if specific noise
-                  needs to be added.
-        :return: x + dx
+                  needs to be added. A tensor of shape (batch_size, d)
+        :return: x + dx, a tensor of shape (batch_size, d)
         """
         if w is None:
             w = torch.randn_like(x)
@@ -54,9 +54,9 @@ class SDE(ABC):
         """
         Gives the drift f(x, t) at given x, t of the SDE.
 
-        :param x: The given sample
-        :param t: The given time
-        :return: f(x, t)
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        :param t: The given time, a tensor of shape (batch_size, 1)
+        :return: f(x, t), a tensor of shape (batch_size, d)
         """
         pass
 
@@ -65,8 +65,8 @@ class SDE(ABC):
         """
         Gives the diffusion g(t) at a given time t.
 
-        :param t: The time
-        :return: g(t)
+        :param t: The given time, a tensor of shape (batch_size, 1)
+        :return: g(t), a tensor of shape (batch_size, 1)
         """
         pass
 
@@ -75,6 +75,8 @@ class SDE(ABC):
         Reverses the SDE to the form :math:`dx = (f(x, t) - g(t)^2 \nabla_x \log p_t(x))dt + g(t)dw`
 
         :param score_fn: The score function, a function s(x, t) for which :math:`s(x, t) \approx \nabla_x \log p_t(x)`
+                         which takes a tensor of shape (batch_size, d) and (batch_size, 1) and maps it to another
+                         tensor of (batch_size, d)
         :return: The reversed SDE
         """
         parent = self
@@ -87,7 +89,7 @@ class SDE(ABC):
                 self._parent = parent
 
             @property
-            def parent(self):
+            def parent(self) -> 'SDE':
                 return parent
 
             def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
@@ -110,9 +112,10 @@ class LinearDriftSDE(SDE, ABC):
         Computes the Gaussian marginal probability distribution of a given sample, at a given time t.
         Marginal distribution can be obtained by solving the Focker-Planck Equation.
 
-        :param x: The given sample.
-        :param t: The time
-        :return: A tuple of (mu, sigma), representing the mean and standard deviation of the sample.
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        :param t: The given time, a tensor of shape (batch_size, 1)
+        :return: A tuple of (mu, sigma), representing the mean and standard deviation of the sample. mu is a tensor
+                 of shape (batch_size, d), sigma a tensor of shape (batch_size, 1)
         """
         return self.mu(x, t), self.sigma(t)
 
@@ -120,9 +123,9 @@ class LinearDriftSDE(SDE, ABC):
         r"""
         Computes a sample x from the marginal :math:`p(x_t|x_0)`, returning the noise for training convenience.
 
-        :param x: The sample x.
-        :param t: Time t from which should be sampled.
-        :return: A tuple of (:math:`x \sim p(x_t|x_0), \epsilon`)
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        :param t: The times t from which should be sampled, a tensor of shape (batch_size, 1)
+        :return: A tuple of (:math:`x \sim p(x_t|x_0), \epsilon`), both with shape (batch_size, d)
         """
         mu, sigma = self.marginal(x, t)
         noise = torch.randn_like(x)
@@ -132,18 +135,31 @@ class LinearDriftSDE(SDE, ABC):
         r"""
         Computes a sample x from the marginal :math:`p(x_t|x_0)`.
 
-        :param x: The sample x.
-        :param t: Time t from which should be sampled.
-        :return: :math:`x \sim p(x_t|x_0)`
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        :param t: The times t from which should be sampled, a tensor of shape (batch_size, 1)
+        :return: :math:`x \sim p(x_t|x_0)`, with shape (batch_size, d)
         """
         return self.sample_noise(x, t)[0]
 
     @abstractmethod
     def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the marginal mean of x at time t.
+
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        :param t: The times t from which should be sampled, a tensor of shape (batch_size, 1)
+        :return: The marginal mean of x at time t, a tensor of shape (batch_size, d)
+        """
         pass
 
     @abstractmethod
     def sigma(self, t: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the marginal standard deviation at time t.
+
+        :param t: The times t from which should be sampled, a tensor of shape (batch_size, 1)
+        :return: The marginal standard deviation at time t, a tensor of shape (batch_size, d)
+        """
         pass
 
 
@@ -155,6 +171,12 @@ class VarianceExplodingSDE(LinearDriftSDE):
     """
 
     def __init__(self, sigma_min: float, sigma_max: float):
+        """
+        Constructs the VarianceExplodingSDE.
+
+        :param sigma_min: The standard deviation, at t = 0
+        :param sigma_max: The standard deviation at t = 1
+        """
         self._sigma_min = torch.Tensor(sigma_min)
         self._sigma_max = torch.Tensor(sigma_max)
 
@@ -175,6 +197,10 @@ class VarianceExplodingSDE(LinearDriftSDE):
 
 
 class VariancePreservingSDE(LinearDriftSDE, ABC):
+    r"""
+    Implements the Variance Preserving SDE by Song et al. (2021). This SDE is given by
+    :math:`dx = -\frac{1}{2}\beta(t)xdt + \sqrt{\beta(t)}dw`, where :math:`\beta(t)` is any differentiable function of t.
+    """
 
     def sigma(self, t: torch.Tensor) -> torch.Tensor:
         return 1 - torch.exp(-self._B(t))
@@ -190,16 +216,38 @@ class VariancePreservingSDE(LinearDriftSDE, ABC):
 
     @abstractmethod
     def _beta(self, t: torch.Tensor) -> torch.Tensor:
+        r"""
+        The beta function, a differentiable function of t.
+
+        :param t: The times t, a tensor of shape (batch_size, 1)
+        :return: :math:`\beta(t)`
+        """
         pass
 
     @abstractmethod
     def _B(self, t: torch.Tensor) -> torch.Tensor:
+        r"""
+        The antiderivative of the beta function, :math:`B(t) = \int \beta(t)dt`
+
+        :param t: The times t, a tensor of shape (batch_size, 1)
+        :return: :math:`B(t)`
+        """
         pass
 
 
 class LinearVariancePreservingSDE(VariancePreservingSDE):
+    r"""
+    A Variance Preserving SDE with a linear beta function, given by
+    :math:`\beta(t) = (\beta_{max} - \beta_{min}) * t + \beta_{min}`
+    """
 
     def __init__(self, beta_min: float, beta_max: float):
+        r"""
+        Constructs the LinearVariancePreservingSDE.
+
+        :param beta_min: Minimum value of :math:`\beta`.
+        :param beta_max: Maximum value of :math:`\beta`.
+        """
         self._beta_min = beta_min
         self._beta_max = beta_max
 
