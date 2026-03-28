@@ -45,7 +45,7 @@ if __name__ == "__main__":
     n_steps = 25
     discretisation = torch.linspace(1, 0, n_steps)
     # solver_ = solver.EulerMarayumaSolver(reverse_sde, discretisation)
-    solver_ = solver.PISolver(reverse_sde, ki=0.101, kp=0.09, tau=0.3, alpha=0.5, h_start=-0.04, max_decrease=0.7, max_increase=1.3)
+    solver_ = solver.PISolver(reverse_sde, ki=0.101, kp=0.09, tau=1, alpha=0.8, h_start=0.04, max_decrease=0.7, max_increase=1.3)
 
     # Results gathering
     n_samples = 100000
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     # Plotting
     plt.figure()
-    plt.hist(x, bins=1000, density=True, label="Sampled")
+    plt.hist(x, bins=200, density=True, label="Sampled")
     plt.plot(interval, verification, c="r", label="True Multimodal Gaussian")
     plt.legend()
     plt.title("PI Adaptive solver transforming to a multimodal Gaussian")
