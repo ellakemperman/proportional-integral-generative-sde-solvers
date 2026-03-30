@@ -15,7 +15,6 @@ class Gaussian:
     def __init__(self,
                  mu: torch.Tensor | float,
                  sigma: torch.Tensor | float,
-                 norm: float = None ,
                  weight: float = 1
                  ):
         """
@@ -29,12 +28,11 @@ class Gaussian:
         self._mu = mu
         self._sigma = sigma
 
-        # Set up normalisation constant
-        self._norm = norm
+        # Set up weight
+        self._weight = weight
 
-        # If not normalisation constant, set it to the standard constant
-        if not self._norm:
-            self._norm = 1 / (sigma * math.sqrt(2 * math.pi)) * weight
+        # Set normalisation constant
+        self._norm = 1 / (sigma * math.sqrt(2 * math.pi)) * weight
 
     @property
     def mu(self) -> torch.Tensor:
@@ -48,6 +46,10 @@ class Gaussian:
     def norm(self) -> float:
         return self._norm
 
+    @property
+    def weight(self) -> float:
+        return self._weight
+
     def score(self, x: torch.Tensor) -> torch.Tensor:
         r"""
         Computes the score at point x.
@@ -55,7 +57,7 @@ class Gaussian:
         :param x: Points for which to compute the score, a tensor of shape (batch_size, 1)
         :return: :math:`-\frac{x - \mu}{\sigma}`, a tensor of shape (batch_size, 1)
         """
-        return - (x - self.mu) / self.sigma
+        return - (x - self.mu) / self.sigma ** 2
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         r"""
@@ -64,7 +66,7 @@ class Gaussian:
         :param x: Points for which to compute the score, a tensor of shape (batch_size, 1)
         :return: :math:`ce^{-\frac{(x - \mu)^2}{2\sigma^2}}`
         """
-        return self.norm * torch.exp(-0.5 * torch.square(x - self.mu) / self.sigma)
+        return self.norm * torch.exp(-0.5 * torch.square(x - self.mu) / self.sigma ** 2)
 
 
 class MultiGaussian:
@@ -103,6 +105,22 @@ class MultiGaussian:
         for gaussian in self._gaussians:
             total += gaussian(x)
         return total
+
+    def sample(self, n: int) -> torch.Tensor:
+        """
+        Samples elements from the MultiGaussian, using ancestral sampling
+
+        :param n: The amount of samples to be obtained.
+        :return: A tensor of shape (n,), following the distribution described by this MultiGaussian.
+        """
+        # Sample which gaussian each point belongs to from a multinomial.
+        weights = torch.Tensor([gaussian.weight for gaussian in self._gaussians])
+        indices = torch.multinomial(weights, n, replacement=True)
+
+        # For each point which belongs to a certain Gaussian, sample from that Gaussian
+        mus = torch.Tensor([gaussian.mu for gaussian in self._gaussians])
+        sigmas = torch.Tensor([gaussian.sigma for gaussian in self._gaussians])
+        return torch.normal(mus[indices], sigmas[indices])
 
     def get_score_function(self) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
         r"""
@@ -158,6 +176,6 @@ class MultiGaussian:
         for gaussian in self._gaussians:
             mu_new = gaussian.mu * alpha_t
             sigma_new = torch.sqrt(alpha_t**2 * gaussian.sigma**2 + sigma_t**2)
-            convolved_gaussians.append(Gaussian(mu_new, sigma_new, gaussian.norm))
+            convolved_gaussians.append(Gaussian(mu_new, sigma_new, gaussian.weight))
 
         return tuple(convolved_gaussians)
