@@ -30,7 +30,7 @@ class SDE(ABC):
         :param t: The given time, a tensor of shape (batch_size, 1)
         :return: A tuple of (drift, diffusion)
         """
-        self._nfe += 1
+        self._nfe += x.shape[0]  # Add batch_size to NFE
         return self.drift(x, t), self.diffusion(t)
 
     def __call__(self, x: torch.Tensor, t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -92,11 +92,13 @@ class SDE(ABC):
         """
         parent = self
 
-        # Construct ReverseSDE class as child from caller SDE, use parent drift and diffusion but update drift to
+        # Construct ReverseSDE class as child from SDE, use parent drift and diffusion but update drift to
         # include the score
-        class ReverseSDE(parent.__class__):
+        class ReverseSDE(SDE):
             """A reversed SDE."""
             def __init__(self):
+                super().__init__()
+
                 self._parent = parent
 
             @property

@@ -108,7 +108,7 @@ if __name__ == "__main__":
     pi_constructor = lambda tolerance: solvers.PISolver(
         reverse_sde,
         ki=0.101,
-        kp=0.1,
+        kp=0.09,
         tau=tolerance,
         alpha=0.8,
         h_start=0.01,

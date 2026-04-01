@@ -2,7 +2,10 @@
 from itertools import pairwise
 from abc import abstractmethod, ABC
 import torch
+from numpy.f2py.auxfuncs import throw_error
+
 from sde import SDE
+import time
 
 
 class Solver(ABC):
@@ -86,7 +89,8 @@ class PISolver(Solver):
                  h_start: float,
                  max_increase: float,
                  max_decrease: float,
-                 interval: tuple[float, float] = (1, 0)
+                 interval: tuple[float, float] = (1, 0),
+                 timeout: float = 20
                  ):
         r"""
         Constructs the PISolver.
@@ -112,16 +116,17 @@ class PISolver(Solver):
         self._h_start = abs(h_start) * (self._end_time - self._start_time) / abs(self._end_time - self._start_time)
         self._max_increase = torch.Tensor([max_increase])
         self._max_decrease = torch.Tensor([max_decrease])
+        self._timeout = timeout
 
     def solve(self, x: torch.tensor) -> torch.tensor:
         t = torch.full((x.shape[0], 1), self._start_time)  # Initialise batch_size times, starting at 1
         h = torch.full((x.shape[0], 1), self._h_start)
         error = torch.full((x.shape[0], 1), 0.5)
         end_condition = torch.full((x.shape[0], 1), self._end_time)
-        i = 0
         reject_count = 0
         not_reject_count = 0
         x_full, t_full, h_full = x, t, h
+        start_time = time.time()
 
         # Loop until all times in the batch are equal to the end time
         while torch.any(not_finished := (t_full != end_condition)):
@@ -159,10 +164,11 @@ class PISolver(Solver):
             # Update the full matrices
             x_full[not_finished], t_full[not_finished], h_full[not_finished] = x, t, h
 
-            i += 1
+            # Timeout
+            if time.time() >= start_time + self._timeout:
+                raise TimeoutError
 
         print(reject_count / (reject_count + not_reject_count))
-        print(i)
         return x_full
 
     def _error(self, x_first: torch.Tensor, x_second: torch.Tensor) -> torch.Tensor:
