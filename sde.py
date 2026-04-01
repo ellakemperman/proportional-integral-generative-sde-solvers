@@ -11,6 +11,16 @@ class SDE(ABC):
     Where :math:`f(x,t)` is the drift, and :math:`g(t)` the diffusion.
     """
 
+    def __init__(self):
+        self._nfe = 0
+
+    @property
+    def nfe(self):
+        return self._nfe
+
+    def reset_nfe(self):
+        self._nfe = 0
+
     def sde(self, x: torch.Tensor, t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the Ito parameters of the SDE for a given sample and time. The SDE is defined by the drift f(t) and
@@ -20,6 +30,7 @@ class SDE(ABC):
         :param t: The given time, a tensor of shape (batch_size, 1)
         :return: A tuple of (drift, diffusion)
         """
+        self._nfe += 1
         return self.drift(x, t), self.diffusion(t)
 
     def __call__(self, x: torch.Tensor, t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -177,6 +188,8 @@ class VarianceExplodingSDE(LinearDriftSDE):
         :param sigma_min: The standard deviation, at t = 0
         :param sigma_max: The standard deviation at t = 1
         """
+        super().__init__()
+
         self._sigma_min = torch.Tensor(sigma_min)
         self._sigma_max = torch.Tensor(sigma_max)
 
@@ -248,6 +261,8 @@ class LinearVariancePreservingSDE(VariancePreservingSDE):
         :param beta_min: Minimum value of :math:`\beta`.
         :param beta_max: Maximum value of :math:`\beta`.
         """
+        super().__init__()
+
         self._beta_min = beta_min
         self._beta_max = beta_max
 
