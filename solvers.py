@@ -1,9 +1,8 @@
 """Definitions of solvers"""
 from itertools import pairwise
 from abc import abstractmethod, ABC
+from typing import Callable
 import torch
-from numpy.f2py.auxfuncs import throw_error
-
 from sde import SDE
 import time
 
@@ -27,11 +26,12 @@ class Solver(ABC):
         return self.__sde
 
     @abstractmethod
-    def solve(self, x: torch.tensor) -> torch.tensor:
+    def solve(self, x: torch.tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         """
         Solves the SDE for data x of shape (batch_size, d).
 
         :param x: Data of shape (batch_size, d).
+        :param callback: Optional function of (x, t) used for tracking values.
         :return: The data x at time t governed by the SDE.
         """
         pass
@@ -54,10 +54,12 @@ class EulerMarayumaSolver(Solver):
         self._discretisation = discretisation
         self._time_steps = map(lambda x: x[1] - x[0], pairwise(discretisation))
 
-    def solve(self, x: torch.tensor) -> torch.tensor:
+    def solve(self, x: torch.tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         for i, dt in enumerate(self._time_steps):
             t = self._discretisation[i]
             x = self.step(x, t, dt)
+            if callback is not None:
+                callback(x, t + dt)
 
         return x
 
@@ -118,7 +120,7 @@ class PISolver(Solver):
         self._max_decrease = torch.Tensor([max_decrease])
         self._timeout = timeout
 
-    def solve(self, x: torch.tensor) -> torch.tensor:
+    def solve(self, x: torch.Tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
         t = torch.full((x.shape[0], 1), self._start_time)  # Initialise batch_size times, starting at 1
         h = torch.full((x.shape[0], 1), self._h_start)
         error = torch.full((x.shape[0], 1), 0.5)
@@ -168,6 +170,9 @@ class PISolver(Solver):
             if time.time() >= start_time + self._timeout:
                 raise TimeoutError
 
+            if callback is not None:
+                callback(x_full, t_full)
+
         print(reject_count / (reject_count + not_reject_count))
         return x_full
 
@@ -194,3 +199,9 @@ class PISolver(Solver):
         integral = (self._alpha * self._tau / error)**(self._ki + self._kp)
         proportional = (error_previous / (self._alpha * self._tau))**self._kp
         return h * torch.min(self._max_increase, torch.max(self._max_decrease, integral * proportional))
+
+
+class PredictorCorrectorSolver(Solver):
+
+    def __init__(self, sde: SDE):
+        super().__init__(sde)

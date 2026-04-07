@@ -179,3 +179,6 @@ class MultiGaussian:
             convolved_gaussians.append(Gaussian(mu_new, sigma_new, gaussian.weight))
 
         return tuple(convolved_gaussians)
+
+    def multigaussian_at_t(self, t: torch.Tensor) -> 'MultiGaussian':
+        return MultiGaussian(self.convolve_gaussians(t), self._sde)
