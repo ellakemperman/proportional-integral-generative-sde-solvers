@@ -185,7 +185,7 @@ class PISolver(Solver):
             if callback is not None:
                 callback(x_full, t_full)
 
-            print(f"T = {torch.mean(t_full)}, h = {torch.mean(h_full)}")
+            # print(f"T = {torch.mean(t_full)}, h = {torch.mean(h_full)}")
 
         print(reject_count / (reject_count + not_reject_count))
         return x_full
