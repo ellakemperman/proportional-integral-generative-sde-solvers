@@ -1,6 +1,7 @@
 """Definitions of the stochastic differential equations"""
 from abc import abstractmethod, ABC
 from typing import Callable
+import math
 import torch
 
 
@@ -13,6 +14,7 @@ class SDE(ABC):
 
     def __init__(self):
         self._nfe = 0
+        self._device = "cpu"
 
     @property
     def nfe(self):
@@ -56,7 +58,7 @@ class SDE(ABC):
         :return: x + dx, a tensor of shape (batch_size, d)
         """
         if w is None:
-            w = torch.randn_like(x)
+            w = torch.randn_like(x).to(self._device)
         drift, diffusion = self.sde(x, t)
         return drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
 
@@ -100,6 +102,7 @@ class SDE(ABC):
                 super().__init__()
 
                 self._parent = parent
+                self.to(self._device)
 
             @property
             def parent(self) -> 'SDE':
@@ -112,6 +115,10 @@ class SDE(ABC):
                 return self.parent.diffusion(t)
 
         return ReverseSDE()
+
+    def to(self, device: str) -> 'SDE':
+        self._device = device
+        return self
 
 
 class LinearDriftSDE(SDE, ABC):
@@ -141,7 +148,7 @@ class LinearDriftSDE(SDE, ABC):
         :return: A tuple of (:math:`x \sim p(x_t|x_0), \epsilon`), both with shape (batch_size, d)
         """
         mu, sigma = self.marginal(x, t)
-        noise = torch.randn_like(x)
+        noise = torch.randn_like(x).to(self._device)
         return mu * x + sigma * torch.randn_like(x), noise
 
     def sample(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
@@ -192,22 +199,22 @@ class VarianceExplodingSDE(LinearDriftSDE):
         """
         super().__init__()
 
-        self._sigma_min = torch.Tensor(sigma_min)
-        self._sigma_max = torch.Tensor(sigma_max)
+        self._sigma_min = sigma_min
+        self._sigma_max = sigma_max
 
     def sigma(self, t: torch.Tensor) -> torch.Tensor:
         return torch.square(self._sigma_min * (self._sigma_max / self._sigma_min) ** t)
 
     def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        return torch.ones(1)
+        return torch.ones(1).to(self._device)
 
     def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        return torch.zeros(x.shape)
+        return torch.zeros(x.shape).to(self._device)
 
     def diffusion(self, t: torch.Tensor) -> torch.Tensor:
         # Compute derivative of sigma^2
         # ds^2(t)/dt = 2 * s^2(t) * (ln(s_max) - ln(s_min))
-        dsigma_dt = 2 * torch.sqrt(self.sigma(t)) * (torch.log(self._sigma_max) - torch.log(self._sigma_min))
+        dsigma_dt = 2 * torch.sqrt(self.sigma(t)) * (math.log(self._sigma_max) - math.log(self._sigma_min))
         return torch.sqrt(dsigma_dt)
 
 

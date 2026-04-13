@@ -20,6 +20,7 @@ class Solver(ABC):
         :param sde: The SDE the solver will have to solve.
         """
         self.__sde = sde
+        self._device = "cpu"
 
     @property
     def sde(self):
@@ -35,6 +36,10 @@ class Solver(ABC):
         :return: The data x at time t governed by the SDE.
         """
         pass
+
+    def to(self, device: str) -> 'Solver':
+        self._device = device
+        return self
 
 
 class EulerMarayumaSolver(Solver):
@@ -56,8 +61,9 @@ class EulerMarayumaSolver(Solver):
 
     def solve(self, x: torch.tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         for i, dt in enumerate(self._time_steps):
-            t = self._discretisation[i]
+            t = self._discretisation[i].to(self._device)
             x = self.step(x, t, dt)
+            print(torch.any(torch.isnan(x)))
             if callback is not None:
                 callback(x, t + dt)
 
@@ -73,6 +79,11 @@ class EulerMarayumaSolver(Solver):
         :return: x + dx
         """
         return x + self.sde.step(x, t, dt)
+
+    def to(self, device: str) -> Solver:
+        super().to(device)
+        self._discretisation.to(self._device)
+        return self
 
 
 class PISolver(Solver):
@@ -121,10 +132,10 @@ class PISolver(Solver):
         self._timeout = timeout
 
     def solve(self, x: torch.Tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
-        t = torch.full((x.shape[0], 1), self._start_time)  # Initialise batch_size times, starting at 1
-        h = torch.full((x.shape[0], 1), self._h_start)
-        error = torch.full((x.shape[0], 1), 0.5)
-        end_condition = torch.full((x.shape[0], 1), self._end_time)
+        t = torch.full((x.shape[0], 1), self._start_time).to(self._device)  # Initialise batch_size times, starting at 1
+        h = torch.full((x.shape[0], 1), self._h_start).to(self._device)
+        error = torch.full((x.shape[0], 1), 0.5).to(self._device)
+        end_condition = torch.full((x.shape[0], 1), self._end_time).to(self._device)
         reject_count = 0
         not_reject_count = 0
         x_full, t_full, h_full = x, t, h
@@ -199,6 +210,12 @@ class PISolver(Solver):
         integral = (self._alpha * self._tau / error)**(self._ki + self._kp)
         proportional = (error_previous / (self._alpha * self._tau))**self._kp
         return h * torch.min(self._max_increase, torch.max(self._max_decrease, integral * proportional))
+
+    def to(self, device: str) -> Solver:
+        super().to(device)
+        self._max_increase.to(device)
+        self._max_decrease.to(device)
+        return self
 
 
 class PredictorCorrectorSolver(Solver):
