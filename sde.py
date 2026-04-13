@@ -12,9 +12,18 @@ class SDE(ABC):
     Where :math:`f(x,t)` is the drift, and :math:`g(t)` the diffusion.
     """
 
-    def __init__(self):
+    def __init__(self, reverse_ode: bool = False):
         self._nfe = 0
         self._device = "cpu"
+        self._ode = reverse_ode
+
+    @property
+    def ode(self) -> bool:
+        return self._ode
+
+    @ode.setter
+    def ode(self, reverse_ode: bool):
+        self._ode = reverse_ode
 
     @property
     def nfe(self):
@@ -60,6 +69,8 @@ class SDE(ABC):
         if w is None:
             w = torch.randn_like(x).to(self._device)
         drift, diffusion = self.sde(x, t)
+        if self._ode:
+            return drift * dt
         return drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
 
     @abstractmethod
@@ -99,7 +110,7 @@ class SDE(ABC):
         class ReverseSDE(SDE):
             """A reversed SDE."""
             def __init__(self):
-                super().__init__()
+                super().__init__(reverse_ode=parent._ode)
 
                 self._parent = parent
                 self.to(self._device)
@@ -109,6 +120,8 @@ class SDE(ABC):
                 return parent
 
             def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+                if self._ode:
+                    return self.parent.drift(x, t) - 0.5 * torch.square(self.parent.diffusion(t)) * score_fn(x, t)
                 return self.parent.drift(x, t) - torch.square(self.parent.diffusion(t)) * score_fn(x, t)
 
             def diffusion(self, t: torch.Tensor) -> torch.Tensor:
@@ -203,7 +216,7 @@ class VarianceExplodingSDE(LinearDriftSDE):
         self._sigma_max = sigma_max
 
     def sigma(self, t: torch.Tensor) -> torch.Tensor:
-        return torch.square(self._sigma_min * (self._sigma_max / self._sigma_min) ** t)
+        return self._sigma_min * (self._sigma_max / self._sigma_min) ** t
 
     def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         return torch.ones(1).to(self._device)
@@ -214,7 +227,7 @@ class VarianceExplodingSDE(LinearDriftSDE):
     def diffusion(self, t: torch.Tensor) -> torch.Tensor:
         # Compute derivative of sigma^2
         # ds^2(t)/dt = 2 * s^2(t) * (ln(s_max) - ln(s_min))
-        dsigma_dt = 2 * torch.sqrt(self.sigma(t)) * (math.log(self._sigma_max) - math.log(self._sigma_min))
+        dsigma_dt = 2 * torch.square(self.sigma(t)) * (math.log(self._sigma_max) - math.log(self._sigma_min))
         return torch.sqrt(dsigma_dt)
 
 
@@ -280,3 +293,13 @@ class LinearVariancePreservingSDE(VariancePreservingSDE):
 
     def _B(self, t: torch.Tensor) -> torch.Tensor:
         return self._beta_min * t + 0.5 * torch.square(t) * (self._beta_max - self._beta_min)
+
+
+class EDMSDE(VarianceExplodingSDE):
+
+    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]) -> 'SDE':
+        def score_fn(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+            sigma = self.sigma(t)
+            return (denoiser(x, sigma) - x) / torch.square(sigma)
+
+        return super().get_reverse_sde(score_fn)

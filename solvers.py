@@ -2,9 +2,10 @@
 from itertools import pairwise
 from abc import abstractmethod, ABC
 from typing import Callable
+import time
 import torch
 from sde import SDE
-import time
+from utils import broadcast_vector
 
 
 class Solver(ABC):
@@ -63,7 +64,6 @@ class EulerMarayumaSolver(Solver):
         for i, dt in enumerate(self._time_steps):
             t = self._discretisation[i].to(self._device)
             x = self.step(x, t, dt)
-            print(torch.any(torch.isnan(x)))
             if callback is not None:
                 callback(x, t + dt)
 
@@ -103,7 +103,7 @@ class PISolver(Solver):
                  max_increase: float,
                  max_decrease: float,
                  interval: tuple[float, float] = (1, 0),
-                 timeout: float = 20
+                 timeout: float = 100
                  ):
         r"""
         Constructs the PISolver.
@@ -132,10 +132,10 @@ class PISolver(Solver):
         self._timeout = timeout
 
     def solve(self, x: torch.Tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
-        t = torch.full((x.shape[0], 1), self._start_time).to(self._device)  # Initialise batch_size times, starting at 1
-        h = torch.full((x.shape[0], 1), self._h_start).to(self._device)
-        error = torch.full((x.shape[0], 1), 0.5).to(self._device)
-        end_condition = torch.full((x.shape[0], 1), self._end_time).to(self._device)
+        t = broadcast_vector(torch.full((x.shape[0],), self._start_time), x).to(self._device)  # Initialise batch_size times, starting at 1
+        h = broadcast_vector(torch.full((x.shape[0],), self._h_start), x).to(self._device)
+        error = torch.full((x.shape[0],), 0.5).to(self._device)
+        end_condition = broadcast_vector(torch.full((x.shape[0],), self._end_time), x).to(self._device)
         reject_count = 0
         not_reject_count = 0
         x_full, t_full, h_full = x, t, h
@@ -158,7 +158,8 @@ class PISolver(Solver):
 
             # Compute extrapolated error
             old_error = error.clone()
-            error[not_finished] = self._error(x_first, x_second)
+            new_error = self._error(x_first, x_second)
+            error[not_finished] = new_error
 
             # Update x and t
             not_rejected = error[not_finished] < 1
@@ -184,6 +185,8 @@ class PISolver(Solver):
             if callback is not None:
                 callback(x_full, t_full)
 
+            print(f"T = {torch.mean(t_full)}, h = {torch.mean(h_full)}")
+
         print(reject_count / (reject_count + not_reject_count))
         return x_full
 
@@ -196,7 +199,7 @@ class PISolver(Solver):
         :return: The error, a tensor of shape (batch_size, 1)
         """
         d = sum(x_first.shape[1:])
-        return torch.sqrt(torch.sum(torch.square((x_second - x_first) / self._tau), dim=1) / d).unsqueeze(-1)
+        return torch.sqrt(torch.sum(torch.square((x_second - x_first) / self._tau).view(x_first.shape[0], -1), dim=1) / d)
 
     def _get_next_step(self, error: torch.Tensor, error_previous, h: torch.Tensor) -> torch.Tensor:
         """
@@ -209,12 +212,12 @@ class PISolver(Solver):
         """
         integral = (self._alpha * self._tau / error)**(self._ki + self._kp)
         proportional = (error_previous / (self._alpha * self._tau))**self._kp
-        return h * torch.min(self._max_increase, torch.max(self._max_decrease, integral * proportional))
+        return h * broadcast_vector(torch.min(self._max_increase, torch.max(self._max_decrease, integral * proportional)), h)
 
     def to(self, device: str) -> Solver:
         super().to(device)
-        self._max_increase.to(device)
-        self._max_decrease.to(device)
+        self._max_increase = self._max_increase.to(self._device)
+        self._max_decrease = self._max_decrease.to(self._device)
         return self
 
 
