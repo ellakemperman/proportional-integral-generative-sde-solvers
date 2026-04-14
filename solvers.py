@@ -62,7 +62,7 @@ class EulerMarayumaSolver(Solver):
 
     def solve(self, x: torch.tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         for i, dt in enumerate(self._time_steps):
-            t = self._discretisation[i].to(self._device)
+            t = broadcast_vector((self._discretisation[i] * torch.ones(x.shape[0])).to(self._device), x)
             x = self.step(x, t, dt)
             if callback is not None:
                 callback(x, t + dt)
@@ -100,6 +100,7 @@ class PISolver(Solver):
                  tau: float,
                  alpha: float,
                  h_start: float,
+                 max_h: float,
                  max_increase: float,
                  max_decrease: float,
                  interval: tuple[float, float] = (1, 0),
@@ -129,6 +130,7 @@ class PISolver(Solver):
         self._h_start = abs(h_start) * (self._end_time - self._start_time) / abs(self._end_time - self._start_time)
         self._max_increase = torch.Tensor([max_increase])
         self._max_decrease = torch.Tensor([max_decrease])
+        self._max_h = max_h
         self._timeout = timeout
 
     def solve(self, x: torch.Tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
@@ -173,7 +175,7 @@ class PISolver(Solver):
             h = self._get_next_step(error[not_finished], old_error[not_finished], h)
 
             # Bound steps such that no step exceeding end condition will be taken
-            h = torch.maximum(h, end_condition[not_finished] - t)
+            h = torch.clamp(torch.maximum(h, end_condition[not_finished] - t), max=self._max_h)
 
             # Update the full matrices
             x_full[not_finished], t_full[not_finished], h_full[not_finished] = x, t, h

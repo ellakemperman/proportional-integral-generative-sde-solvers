@@ -94,13 +94,14 @@ class SDE(ABC):
         """
         pass
 
-    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]) -> 'SDE':
+    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: int = 0) -> 'SDE':
         r"""
         Reverses the SDE to the form :math:`dx = (f(x, t) - g(t)^2 \nabla_x \log p_t(x))dt + g(t)dw`
 
         :param score_fn: The score function, a function s(x, t) for which :math:`s(x, t) \approx \nabla_x \log p_t(x)`
                          which takes a tensor of shape (batch_size, d) and (batch_size, 1) and maps it to another
                          tensor of (batch_size, d)
+        :param ode_threshold: Time threshold for when to apply ODE over SDE.
         :return: The reversed SDE
         """
         parent = self
@@ -126,6 +127,14 @@ class SDE(ABC):
 
             def diffusion(self, t: torch.Tensor) -> torch.Tensor:
                 return self.parent.diffusion(t)
+
+            def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor = None) -> torch.Tensor:
+                if w is None:
+                    w = torch.randn_like(x).to(self._device)
+                w[t.view(x.shape[0]) < ode_threshold] = torch.zeros(w[t.view(x.shape[0]) < ode_threshold].shape).to(self._device)
+                if torch.any(t.view(x.shape[0]) < ode_threshold):
+                    self.ode = True
+                return super().step(x, t, dt, w)
 
         return ReverseSDE()
 
@@ -297,9 +306,9 @@ class LinearVariancePreservingSDE(VariancePreservingSDE):
 
 class EDMSDE(VarianceExplodingSDE):
 
-    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]) -> 'SDE':
+    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
         def score_fn(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
             sigma = self.sigma(t)
             return (denoiser(x, sigma) - x) / torch.square(sigma)
 
-        return super().get_reverse_sde(score_fn)
+        return super().get_reverse_sde(score_fn, ode_threshold)
