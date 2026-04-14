@@ -64,6 +64,7 @@ class EulerMarayumaSolver(Solver):
         for i, dt in enumerate(self._time_steps):
             t = broadcast_vector((self._discretisation[i] * torch.ones(x.shape[0])).to(self._device), x)
             x = self.step(x, t, dt)
+            print(torch.any(torch.isnan(x)))
             if callback is not None:
                 callback(x, t + dt)
 
@@ -187,7 +188,7 @@ class PISolver(Solver):
             if callback is not None:
                 callback(x_full, t_full)
 
-            # print(f"T = {torch.mean(t_full)}, h = {torch.mean(h_full)}")
+            print(f"T = {torch.mean(t_full)}, h = {torch.mean(h_full)}")
 
         print(reject_count / (reject_count + not_reject_count))
         return x_full

@@ -94,7 +94,7 @@ class SDE(ABC):
         """
         pass
 
-    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: int = 0) -> 'SDE':
+    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
         r"""
         Reverses the SDE to the form :math:`dx = (f(x, t) - g(t)^2 \nabla_x \log p_t(x))dt + g(t)dw`
 
@@ -304,7 +304,29 @@ class LinearVariancePreservingSDE(VariancePreservingSDE):
         return self._beta_min * t + 0.5 * torch.square(t) * (self._beta_max - self._beta_min)
 
 
-class EDMSDE(VarianceExplodingSDE):
+class EDMSDE(LinearDriftSDE):
+
+    def diffusion(self, t: torch.Tensor) -> torch.Tensor:
+        return torch.sqrt(2 * t)
+
+    def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        return torch.zeros(x.shape).to(self._device).to(self._device)
+
+    def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        return torch.ones(x.shape).to(self._device)
+
+    def sigma(self, t: torch.Tensor) -> torch.Tensor:
+        return t
+
+    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
+        def score_fn(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+            d = denoiser(x, t)
+            return (d - x) / torch.square(t)
+
+        return super().get_reverse_sde(score_fn, ode_threshold)
+
+
+class VarianceExplodingEDMSDE(VarianceExplodingSDE):
 
     def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
         def score_fn(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
@@ -312,3 +334,4 @@ class EDMSDE(VarianceExplodingSDE):
             return (denoiser(x, sigma) - x) / torch.square(sigma)
 
         return super().get_reverse_sde(score_fn, ode_threshold)
+
