@@ -122,13 +122,13 @@ class MultiGaussian:
         sigmas = torch.Tensor([gaussian.sigma for gaussian in self._gaussians])
         return torch.normal(mus[indices], sigmas[indices])
 
-    def get_score_function(self) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
+    def get_score_function(self) -> Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]:
         r"""
         Obtains the score function from the Gaussian, so it can be used by a reverse SDE.
 
         :return: The score function :math:`\nabla_x \log p_t(x)`
         """
-        return self.score
+        return lambda x, t, _: self.score(x, t)
 
     def score(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         r"""

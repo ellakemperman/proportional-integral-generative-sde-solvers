@@ -14,6 +14,12 @@ import sde
 import gaussians
 
 
+def calculate_distance(x1: torch.Tensor, x2: torch.Tensor, n_bins=100000) -> float:
+    bin_min, bin_max = torch.min(x1[0], x2[0]), torch.max(x1[-1], x2[-1])
+    bin_cutoffs = torch.linspace(bin_min, bin_max, n_bins)
+    return float(torch.sum(torch.abs(torch.histogram(x1, bins=bin_cutoffs)[0] - torch.histogram(x2, bins=bin_cutoffs)[0])) / x1.shape[0])
+
+
 def evaluate_solvers(solvers: Iterable[solvers.Solver],
                      x_start: torch.Tensor,
                      x: torch.Tensor,
@@ -60,6 +66,7 @@ if __name__ == "__main__":
     sde = sde.LinearVariancePreservingSDE(beta_min, beta_max)
 
     # Gaussian & score setup
+    # Gaussian & score setup
     gaussian1 = gaussians.Gaussian(
         mu=0,
         sigma=1,
@@ -88,6 +95,7 @@ if __name__ == "__main__":
 
     # Create reverse sde based on score function
     reverse_sde = sde.get_reverse_sde(score_func)
+    reverse_sde.ode = True
 
     # Create data
     n_samples = 100000
@@ -99,7 +107,7 @@ if __name__ == "__main__":
     # Create solver iterables
     n_evaluation_points = 100
 
-    step_range = (10, 500)
+    step_range = (10, 100)
     em_evaluation_range = torch.round(torch.exp(torch.linspace(math.log(step_range[0]), math.log(step_range[1]), n_evaluation_points)))
     em_constructor = lambda n_steps: solvers.EulerMarayumaSolver(reverse_sde, torch.linspace(1, 0, int(n_steps)))
 
@@ -108,12 +116,14 @@ if __name__ == "__main__":
     pi_constructor = lambda tolerance: solvers.PISolver(
         reverse_sde,
         ki=0.101,
-        kp=0.1,
+        kp=0.09,
         tau=tolerance,
         alpha=0.8,
         h_start=0.01,
         max_decrease=0.7,
-        max_increase=1.20
+        max_increase=1.20,
+        max_h=1,
+        timeout=20
     )
 
     em_solvers = create_solvers(em_constructor, em_evaluation_range)
@@ -134,8 +144,8 @@ if __name__ == "__main__":
     sns.scatterplot(df, x="em_nfe", y="em_error", label="em")
     sns.scatterplot(df, x="pi_nfe", y="pi_error", label="pi")
     plt.xlabel("NFE")
-    plt.xlim(0, 500)
-    plt.ylim(0, 2)
+    plt.xlim(0, 100)
+    # plt.ylim(0, 0.2)
     plt.ylabel("Error")
     plt.title("NFE - Error tradeoff of EM and PI solver")
     plt.legend()

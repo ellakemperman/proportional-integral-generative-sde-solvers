@@ -32,30 +32,38 @@ class SDE(ABC):
     def reset_nfe(self):
         self._nfe = 0
 
-    def sde(self, x: torch.Tensor, t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def sde(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the Ito parameters of the SDE for a given sample and time. The SDE is defined by the drift f(t) and
         the diffusion g(t).
 
         :param x: The given sample, a tensor of shape (batch_size, d)
         :param t: The given time, a tensor of shape (batch_size, 1)
+        :param labels: Optional labels parameter to be passed into the drift
         :return: A tuple of (drift, diffusion)
         """
         self._nfe += x.shape[0]  # Add batch_size to NFE
-        return self.drift(x, t), self.diffusion(t)
+        return self.drift(x, t, labels), self.diffusion(t)
 
-    def __call__(self, x: torch.Tensor, t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def __call__(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the Ito parameters of the SDE for a given sample and time. The SDE is defined by the drift f(t) and
         the diffusion g(t).
 
         :param x: The given sample, a tensor of shape (batch_size, d).
         :param t: The given time, a tensor of shape (batch_size, 1).
+        :param labels: Optional labels parameter to be passed into the drift
         :return: A tuple of (drift, diffusion), with shapes (batch_size, d) and (batch_size, 1).
         """
         return self.sde(x, t)
 
-    def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor = None) -> torch.Tensor:
+    def step(self,
+             x: torch.tensor,
+             t: torch.tensor,
+             dt: torch.tensor,
+             w: torch.Tensor = None,
+             labels: torch.Tensor = None
+             ) -> torch.Tensor:
         r"""
         Takes a step of size dt.
 
@@ -64,22 +72,24 @@ class SDE(ABC):
         :param dt: The step size, a tensor of shape (batch_size, 1)
         :param w: The noise added. By default, this is set to :math:`\mathcal{N}(0, I)`. Provide if specific noise
                   needs to be added. A tensor of shape (batch_size, d)
+        :param labels: Optional labels parameter to be passed into the drift
         :return: x + dx, a tensor of shape (batch_size, d)
         """
         if w is None:
             w = torch.randn_like(x).to(self._device)
-        drift, diffusion = self.sde(x, t)
+        drift, diffusion = self.sde(x, t, labels)
         if self._ode:
             return drift * dt
         return drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
 
     @abstractmethod
-    def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         """
         Gives the drift f(x, t) at given x, t of the SDE.
 
         :param x: The given sample, a tensor of shape (batch_size, d)
         :param t: The given time, a tensor of shape (batch_size, 1)
+        :param labels: Optional labels parameter to indicate data labels
         :return: f(x, t), a tensor of shape (batch_size, d)
         """
         pass
@@ -94,7 +104,7 @@ class SDE(ABC):
         """
         pass
 
-    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
+    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
         r"""
         Reverses the SDE to the form :math:`dx = (f(x, t) - g(t)^2 \nabla_x \log p_t(x))dt + g(t)dw`
 
@@ -120,21 +130,21 @@ class SDE(ABC):
             def parent(self) -> 'SDE':
                 return parent
 
-            def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+            def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
                 if self._ode:
-                    return self.parent.drift(x, t) - 0.5 * torch.square(self.parent.diffusion(t)) * score_fn(x, t)
-                return self.parent.drift(x, t) - torch.square(self.parent.diffusion(t)) * score_fn(x, t)
+                    return self.parent.drift(x, t) - 0.5 * torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
+                return self.parent.drift(x, t) - torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
 
             def diffusion(self, t: torch.Tensor) -> torch.Tensor:
                 return self.parent.diffusion(t)
 
-            def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor = None) -> torch.Tensor:
+            def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor = None, labels: torch.Tensor = None) -> torch.Tensor:
                 if w is None:
                     w = torch.randn_like(x).to(self._device)
                 w[t.view(x.shape[0]) < ode_threshold] = torch.zeros(w[t.view(x.shape[0]) < ode_threshold].shape).to(self._device)
                 if torch.any(t.view(x.shape[0]) < ode_threshold):
                     self.ode = True
-                return super().step(x, t, dt, w)
+                return super().step(x, t, dt, w, labels)
 
         return ReverseSDE()
 
@@ -230,7 +240,7 @@ class VarianceExplodingSDE(LinearDriftSDE):
     def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         return torch.ones(1).to(self._device)
 
-    def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         return torch.zeros(x.shape).to(self._device)
 
     def diffusion(self, t: torch.Tensor) -> torch.Tensor:
@@ -252,7 +262,7 @@ class VariancePreservingSDE(LinearDriftSDE, ABC):
     def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         return torch.exp(-0.5 * self._B(t))
 
-    def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         return -0.5 * self._beta(t) * x
 
     def diffusion(self, t: torch.Tensor) -> torch.Tensor:
@@ -309,7 +319,7 @@ class EDMSDE(LinearDriftSDE):
     def diffusion(self, t: torch.Tensor) -> torch.Tensor:
         return torch.sqrt(2 * t)
 
-    def drift(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         return torch.zeros(x.shape).to(self._device).to(self._device)
 
     def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
@@ -318,9 +328,9 @@ class EDMSDE(LinearDriftSDE):
     def sigma(self, t: torch.Tensor) -> torch.Tensor:
         return t
 
-    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
-        def score_fn(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-            d = denoiser(x, t)
+    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
+        def score_fn(x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
+            d = denoiser(x, t, labels)
             return (d - x) / torch.square(t)
 
         return super().get_reverse_sde(score_fn, ode_threshold)
@@ -328,10 +338,10 @@ class EDMSDE(LinearDriftSDE):
 
 class VarianceExplodingEDMSDE(VarianceExplodingSDE):
 
-    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
-        def score_fn(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+    def get_reverse_sde(self, denoiser: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
+        def score_fn(x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
             sigma = self.sigma(t)
-            return (denoiser(x, sigma) - x) / torch.square(sigma)
+            return (denoiser(x, sigma, labels) - x) / torch.square(sigma)
 
         return super().get_reverse_sde(score_fn, ode_threshold)
 

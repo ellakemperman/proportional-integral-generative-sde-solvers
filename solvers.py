@@ -28,11 +28,13 @@ class Solver(ABC):
         return self.__sde
 
     @abstractmethod
-    def solve(self, x: torch.tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
+    def solve(self, x: torch.tensor, labels: torch.Tensor = None,
+              callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         """
         Solves the SDE for data x of shape (batch_size, d).
 
         :param x: Data of shape (batch_size, d).
+        :param labels: Optional labels to be passed to the score function
         :param callback: Optional function of (x, t) used for tracking values.
         :return: The data x at time t governed by the SDE.
         """
@@ -60,26 +62,16 @@ class EulerMarayumaSolver(Solver):
         self._discretisation = discretisation
         self._time_steps = map(lambda x: x[1] - x[0], pairwise(discretisation))
 
-    def solve(self, x: torch.tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
+    def solve(self, x: torch.tensor, labels: torch.Tensor = None,
+              callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         for i, dt in enumerate(self._time_steps):
             t = broadcast_vector((self._discretisation[i] * torch.ones(x.shape[0])).to(self._device), x)
-            x = self.step(x, t, dt)
-            print(torch.any(torch.isnan(x)))
+            x += self.sde.step(x, t, dt, labels=labels)
+            # print(torch.any(torch.isnan(x)))
             if callback is not None:
                 callback(x, t + dt)
 
         return x
-
-    def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor) -> torch.tensor:
-        """
-        Computes one Euler-Marayuma step on the data x.
-
-        :param x: Data of shape (batch_size, d).
-        :param t: Scalar time
-        :param dt: Scalar time-step
-        :return: x + dx
-        """
-        return x + self.sde.step(x, t, dt)
 
     def to(self, device: str) -> Solver:
         super().to(device)
@@ -134,7 +126,8 @@ class PISolver(Solver):
         self._max_h = max_h
         self._timeout = timeout
 
-    def solve(self, x: torch.Tensor, callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
+    def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
+              callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
         t = broadcast_vector(torch.full((x.shape[0],), self._start_time), x).to(self._device)  # Initialise batch_size times, starting at 1
         h = broadcast_vector(torch.full((x.shape[0],), self._h_start), x).to(self._device)
         error = torch.full((x.shape[0],), 0.5).to(self._device)
@@ -152,8 +145,8 @@ class PISolver(Solver):
 
             # Perform Euler and Heun step
             w = torch.randn_like(x)
-            dx_euler = self.sde.step(x, t, h, w)
-            dx_heun = self.sde.step(x + dx_euler, t + h, h, w)
+            dx_euler = self.sde.step(x, t, h, w, labels=labels[not_finished])
+            dx_heun = self.sde.step(x + dx_euler, t + h, h, w, labels=labels[not_finished])
 
             # Compute first and second order x
             x_first = x + dx_euler
@@ -222,9 +215,3 @@ class PISolver(Solver):
         self._max_increase = self._max_increase.to(self._device)
         self._max_decrease = self._max_decrease.to(self._device)
         return self
-
-
-class PredictorCorrectorSolver(Solver):
-
-    def __init__(self, sde: SDE):
-        super().__init__(sde)
