@@ -90,7 +90,8 @@ class PISolver(Solver):
                  sde: SDE,
                  ki: float,
                  kp: float,
-                 tau: float,
+                 tau_a: float,
+                 tau_r: float,
                  alpha: float,
                  h_start: float,
                  max_h: float,
@@ -105,7 +106,8 @@ class PISolver(Solver):
         :param sde: The SDE the solver will have to solve.
         :param ki: The integral constant, determining influence of integral component.
         :param kp: The proportional constant, determining influence of integral component.
-        :param tau: The tolerance tau, higher meaning the solver has a higher tolerance for error.
+        :param tau_a: The absolute tolerance tau_a, the minimum tolerance of the solver.
+        :param tau_r: The relative tolerance tau_r, the factor that scales tolerance by pixel magnitude
         :param alpha: The safety factor, for which :math:`\alpha \leq 1`, reduces chance of rejecting next step size.
         :param h_start: The starting step size.
         :param max_increase: A factor determining the maximum increase of the step size for each step.
@@ -116,7 +118,8 @@ class PISolver(Solver):
 
         self._ki = ki
         self._kp = kp
-        self._tau = tau
+        self._tau_a = tau_a
+        self._tau_r = tau_r
         self._alpha = alpha
         self._start_time = float(interval[0])
         self._end_time = float(interval[1])
@@ -132,6 +135,8 @@ class PISolver(Solver):
         h = broadcast_vector(torch.full((x.shape[0],), self._h_start), x).to(self._device)
         error = torch.full((x.shape[0],), 0.5).to(self._device)
         end_condition = broadcast_vector(torch.full((x.shape[0],), self._end_time), x).to(self._device)
+        if labels is None:
+            labels = torch.zeros(x.shape[0],)
         reject_count = 0
         not_reject_count = 0
         x_full, t_full, h_full = x, t, h
@@ -181,8 +186,6 @@ class PISolver(Solver):
             if callback is not None:
                 callback(x_full, t_full)
 
-            print(f"T = {torch.mean(t_full)}, h = {torch.mean(h_full)}")
-
         print(reject_count / (reject_count + not_reject_count))
         return x_full
 
@@ -195,7 +198,12 @@ class PISolver(Solver):
         :return: The error, a tensor of shape (batch_size, 1)
         """
         d = sum(x_first.shape[1:])
-        return torch.sqrt(torch.sum(torch.square((x_second - x_first) / self._tau).view(x_first.shape[0], -1), dim=1) / d)
+        if d != 1:
+            norm = broadcast_vector(self._tau_a + self._tau_r * torch.std(x_second.view(x_second.shape[0], -1), dim=1), x_second)
+        else:
+            norm = broadcast_vector(self._tau_a + self._tau_r * torch.abs(x_second), x_second)
+        squared_error = torch.square((x_second - x_first) / norm)
+        return torch.sqrt(torch.sum(squared_error.view(x_first.shape[0], -1), dim=1) / d)
 
     def _get_next_step(self, error: torch.Tensor, error_previous, h: torch.Tensor) -> torch.Tensor:
         """
@@ -206,9 +214,9 @@ class PISolver(Solver):
         :param h: Current step size, tensor of shape (batch_size, 1).
         :return: The new step size, a tensor of shape (batch_size, 1).
         """
-        integral = (self._alpha * self._tau / error)**(self._ki + self._kp)
-        proportional = (error_previous / (self._alpha * self._tau))**self._kp
-        return h * broadcast_vector(torch.min(self._max_increase, torch.max(self._max_decrease, integral * proportional)), h)
+        integral = (self._alpha * self._tau_a / error)**(self._ki + self._kp)
+        proportional = (error_previous / (self._alpha * self._tau_a))**self._kp
+        return h * broadcast_vector(torch.clamp(integral * proportional, min=self._max_decrease, max=self._max_increase), h)
 
     def to(self, device: str) -> Solver:
         super().to(device)

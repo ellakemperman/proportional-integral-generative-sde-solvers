@@ -66,7 +66,6 @@ if __name__ == "__main__":
     sde = sde.LinearVariancePreservingSDE(beta_min, beta_max)
 
     # Gaussian & score setup
-    # Gaussian & score setup
     gaussian1 = gaussians.Gaussian(
         mu=0,
         sigma=1,
@@ -95,7 +94,6 @@ if __name__ == "__main__":
 
     # Create reverse sde based on score function
     reverse_sde = sde.get_reverse_sde(score_func)
-    reverse_sde.ode = True
 
     # Create data
     n_samples = 100000
@@ -116,9 +114,10 @@ if __name__ == "__main__":
     pi_constructor = lambda tolerance: solvers.PISolver(
         reverse_sde,
         ki=0.101,
-        kp=0.09,
-        tau=tolerance,
-        alpha=0.8,
+        kp=0.009,
+        tau_a=0.3,
+        tau_r=tolerance,
+        alpha=0.9,
         h_start=0.01,
         max_decrease=0.7,
         max_increase=1.20,
