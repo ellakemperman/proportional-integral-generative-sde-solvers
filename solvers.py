@@ -40,7 +40,7 @@ class Solver(ABC):
         """
         pass
 
-    def to(self, device: str) -> 'Solver':
+    def to(self, device: torch.device | str) -> 'Solver':
         self._device = device
         return self
 
@@ -94,11 +94,10 @@ class PISolver(Solver):
                  tau_r: float,
                  alpha: float,
                  h_start: float,
-                 max_h: float,
                  max_increase: float,
                  max_decrease: float,
                  interval: tuple[float, float] = (1, 0),
-                 timeout: float = 100
+                 max_iter: int = 10000
                  ):
         r"""
         Constructs the PISolver.
@@ -126,8 +125,7 @@ class PISolver(Solver):
         self._h_start = abs(h_start) * (self._end_time - self._start_time) / abs(self._end_time - self._start_time)
         self._max_increase = torch.Tensor([max_increase])
         self._max_decrease = torch.Tensor([max_decrease])
-        self._max_h = max_h
-        self._timeout = timeout
+        self._max_iter = max_iter
 
     def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
@@ -141,9 +139,10 @@ class PISolver(Solver):
         not_reject_count = 0
         x_full, t_full, h_full = x, t, h
         start_time = time.time()
+        i = 0
 
         # Loop until all times in the batch are equal to the end time
-        while torch.any(not_finished := (t_full != end_condition)):
+        while torch.any(not_finished := (t_full != end_condition)) and i < self._max_iter:
             # Work with the unfinished subset of x, t, h
             not_finished = not_finished.reshape(-1)
             x, t, h = x_full[not_finished], t_full[not_finished], h_full[not_finished]
@@ -174,17 +173,15 @@ class PISolver(Solver):
             h = self._get_next_step(error[not_finished], old_error[not_finished], h)
 
             # Bound steps such that no step exceeding end condition will be taken
-            h = torch.clamp(torch.maximum(h, end_condition[not_finished] - t), max=self._max_h)
+            h = torch.maximum(h, end_condition[not_finished] - t)
 
             # Update the full matrices
             x_full[not_finished], t_full[not_finished], h_full[not_finished] = x, t, h
 
-            # Timeout
-            if time.time() >= start_time + self._timeout:
-                raise TimeoutError
-
             if callback is not None:
-                callback(x_full, t_full)
+                callback(x_full, t_full, h_full, error)
+            print(f"\r{i}", end="")
+            i += 1
 
         print(reject_count / (reject_count + not_reject_count))
         return x_full

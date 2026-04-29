@@ -124,7 +124,7 @@ class SDE(ABC):
                 super().__init__(reverse_ode=parent._ode)
 
                 self._parent = parent
-                self.to(self._device)
+                self.to(parent._device)
 
             @property
             def parent(self) -> 'SDE':
@@ -344,4 +344,3 @@ class VarianceExplodingEDMSDE(VarianceExplodingSDE):
             return (denoiser(x, sigma, labels) - x) / torch.square(sigma)
 
         return super().get_reverse_sde(score_fn, ode_threshold)
-
