@@ -27,6 +27,8 @@ class PIDataLogger:
         return self.callback(x, t, h, error)
 
     def callback(self, x: torch.Tensor, t: torch.Tensor, h: torch.Tensor, error: torch.Tensor):
+        print(f"\r{self._i}", end="")
+
         batch_size = x.shape[0]
 
         self._ts[:batch_size, self._i] = t.to(self._device).reshape(batch_size)

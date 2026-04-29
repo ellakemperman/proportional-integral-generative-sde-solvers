@@ -14,7 +14,7 @@ import sde
 import gaussians
 
 
-def calculate_distance(x1: torch.Tensor, x2: torch.Tensor, n_bins=100000) -> float:
+def calculate_distance(x1: torch.Tensor, x2: torch.Tensor, n_bins=1000) -> float:
     bin_min, bin_max = torch.min(x1[0], x2[0]), torch.max(x1[-1], x2[-1])
     bin_cutoffs = torch.linspace(bin_min, bin_max, n_bins)
     return float(torch.sum(torch.abs(torch.histogram(x1, bins=bin_cutoffs)[0] - torch.histogram(x2, bins=bin_cutoffs)[0])) / x1.shape[0])
@@ -34,7 +34,7 @@ def evaluate_solvers(solvers: Iterable[solvers.Solver],
             x_hat = solver.solve(x_start.clone())
             nfe.append(sde_.nfe / x.shape[0])
             distance.append(
-                stats.wasserstein_distance(x[:, 0], torch.sort(x_hat)[0][:, 0])
+                calculate_distance(x[:, 0], torch.sort(x_hat)[0][:, 0])
             )
         except TimeoutError:
             print("Timeout error")
@@ -126,7 +126,6 @@ if __name__ == "__main__":
         h_start=0.01,
         max_decrease=0.7,
         max_increase=1.20,
-        timeout=8
     )
 
     em_solvers = create_solvers(em_constructor, em_evaluation_range)
