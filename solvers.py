@@ -3,6 +3,7 @@ from itertools import pairwise
 from abc import abstractmethod, ABC
 from typing import Callable
 import time
+import numpy as np
 import torch
 from sde import SDE
 from utils import broadcast_vector
@@ -117,7 +118,8 @@ class PISolver(Solver):
                  max_increase: float,
                  max_decrease: float,
                  interval: tuple[float, float] = (1, 0),
-                 max_iter: int = 10000
+                 max_iter: int = 10000,
+                 abs_error: bool = False,
                  ):
         r"""
         Constructs the PISolver.
@@ -146,6 +148,7 @@ class PISolver(Solver):
         self._max_increase = torch.Tensor([max_increase])
         self._max_decrease = torch.Tensor([max_decrease])
         self._max_iter = max_iter
+        self._abs_error = abs_error
 
     def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
@@ -213,8 +216,10 @@ class PISolver(Solver):
         :return: The error, a tensor of shape (batch_size, 1)
         """
         d = sum(x_first.shape[1:])
-        if d != 1:
+        if d != 1 and not self._abs_error:
             norm = broadcast_vector(self._tau_a + self._tau_r * torch.std(x_second.view(x_second.shape[0], -1), dim=1), x_second)
+        elif self._abs_error:
+            norm = self._tau_a + self._tau_r * torch.abs(x_second)
         else:
             norm = broadcast_vector(self._tau_a + self._tau_r * torch.abs(x_second), x_second)
         squared_error = torch.square((x_second - x_first) / norm)
@@ -240,6 +245,7 @@ class PISolver(Solver):
         return self
 
 
+# From EDM2: https://github.com/NVlabs/edm2/tree/main
 def edm_sampler(
     net, noise, labels=None, gnet=None,
     num_steps=32, sigma_min=0.002, sigma_max=80, rho=7, guidance=1,

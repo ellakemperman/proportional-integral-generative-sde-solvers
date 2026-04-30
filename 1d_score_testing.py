@@ -103,25 +103,21 @@ if __name__ == "__main__":
     x_start = sde.sample(x, torch.Tensor([1]))
 
     # Create solver iterables
-    n_evaluation_points = 10
+    n_evaluation_points = 100
 
     step_range = (10, 100)
     em_evaluation_range = torch.round(torch.exp(torch.linspace(math.log(step_range[0]), math.log(step_range[1]), n_evaluation_points)))
     em_constructor = lambda n_steps: solvers.EulerMarayumaSolver(reverse_sde, torch.linspace(1, 0, int(n_steps)))
 
     tolerance_range = (0.1, 1.3)
-    tol_vals = torch.exp(torch.linspace(math.log(tolerance_range[0]), math.log(tolerance_range[1]), n_evaluation_points))
-    pi_evaluation_range = []
-    for i in range(n_evaluation_points):
-        for j in range(n_evaluation_points):
-            pi_evaluation_range.append((tol_vals[i], tol_vals[j]))
+    pi_evaluation_range = torch.exp(torch.linspace(math.log(tolerance_range[0]), math.log(tolerance_range[1]), n_evaluation_points))
 
     pi_constructor = lambda tolerance: solvers.PISolver(
         reverse_sde,
         ki=0.3,
         kp=0.1,
-        tau_a=tolerance[0],
-        tau_r=tolerance[1],
+        tau_a=0.1,
+        tau_r=tolerance,
         alpha=0.9,
         h_start=0.01,
         max_decrease=0.7,
@@ -135,7 +131,7 @@ if __name__ == "__main__":
     df = pd.DataFrame()
 
     df["pi_nfe"],df["pi_error"] = evaluate_solvers(pi_solvers, x_start, x, reverse_sde, seed)
-    em_nfe, em_error            = evaluate_solvers(em_solvers, x_start, x, reverse_sde, seed)
+    df["em_nfe"],df["em_error"] = evaluate_solvers(em_solvers, x_start, x, reverse_sde, seed)
     df["pi_tau"]                = pi_evaluation_range
 
     # Write data
@@ -143,7 +139,7 @@ if __name__ == "__main__":
 
     # Create plot
     plt.figure()
-    sns.scatterplot(x=em_nfe, y=em_error, label="em")
+    sns.scatterplot(df, x="em_nfe", y="em_error", label="em")
     sns.scatterplot(df, x="pi_nfe", y="pi_error", label="pi")
     plt.xlabel("NFE")
     plt.xlim(0, 100)
