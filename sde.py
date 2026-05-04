@@ -12,10 +12,11 @@ class SDE(ABC):
     Where :math:`f(x,t)` is the drift, and :math:`g(t)` the diffusion.
     """
 
-    def __init__(self, reverse_ode: bool = False):
+    def __init__(self, ode: bool = False):
         self._nfe = 0
         self._device = "cpu"
-        self._ode = reverse_ode
+        self._ode = ode
+        self.__original_ode = ode
 
     @property
     def ode(self) -> bool:
@@ -29,8 +30,9 @@ class SDE(ABC):
     def nfe(self):
         return self._nfe
 
-    def reset_nfe(self):
+    def reset(self):
         self._nfe = 0
+        self._ode = self.__original_ode
 
     def sde(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -78,7 +80,7 @@ class SDE(ABC):
         if w is None:
             w = torch.randn_like(x).to(self._device)
         drift, diffusion = self.sde(x, t, labels)
-        if self._ode:
+        if self.ode:
             return drift * dt
         return drift * dt + diffusion * torch.sqrt(torch.abs(dt)) * w
 
@@ -121,7 +123,7 @@ class SDE(ABC):
         class ReverseSDE(SDE):
             """A reversed SDE."""
             def __init__(self):
-                super().__init__(reverse_ode=parent._ode)
+                super().__init__(ode=parent.ode)
 
                 self._parent = parent
                 self.to(parent._device)
@@ -131,7 +133,7 @@ class SDE(ABC):
                 return parent
 
             def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
-                if self._ode:
+                if self.ode:
                     return self.parent.drift(x, t) - 0.5 * torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
                 return self.parent.drift(x, t) - torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
 
