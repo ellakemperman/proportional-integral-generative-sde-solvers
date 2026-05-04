@@ -1,8 +1,10 @@
 """Gaussians, and their score."""
-import torch
 import math
 from typing import Callable
-from sde import LinearDriftSDE
+
+import torch
+
+from sde_lib import LinearDriftSDE
 
 
 class Gaussian:

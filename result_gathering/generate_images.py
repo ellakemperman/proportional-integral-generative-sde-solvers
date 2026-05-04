@@ -6,8 +6,8 @@ import pandas as pd
 import tqdm
 
 import dnnlib
-from sde import EDMSDE, SDE
-from solvers import *
+from sde_lib import EDMSDE, SDE
+from solver_lib import *
 
 
 class PIDataLogger:
@@ -79,7 +79,7 @@ def generate_images(
         seed: int = 0,
         n_samples: int = 50000,
         batch_size: int = 64,
-        model_url: str = "model/edm2-img64-xl-0671088-0.040.pkl",
+        model_url: str = "../model/edm2-img64-xl-0671088-0.040.pkl",
         device: torch.device | str = "cuda",
         callback: PIDataLogger | None = None
 ):
@@ -148,8 +148,8 @@ if __name__ == "__main__":
     n_samples = 1000
     max_iter = 150
 
-    image_out_path = "image_testing/pi/test/images/"
-    data_out_path = "image_testing/pi/test/data/"
+    image_out_path = "../data/image_testing/pi/test/images/"
+    data_out_path = "../data/image_testing/pi/test/data/"
 
     pi_constructor = get_pi_solver_func(max_iter)
     logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
