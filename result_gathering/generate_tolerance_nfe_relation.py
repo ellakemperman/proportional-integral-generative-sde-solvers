@@ -86,10 +86,12 @@ def apply_over_grid(
     return nfes, reject_rate
 
 if __name__ == "__main__":
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Out path
-    outdir = "../data/tolerance_grid/eval"
+    outdir = "../data/tolerance_grid/eval2"
+    os.makedirs(outdir, exist_ok=True)
 
     # hyper parameters
     batch_size = 16
@@ -99,31 +101,40 @@ if __name__ == "__main__":
     ki = 0.3
     kp = 0.1
     alpha = 0.9
+    ode_threshold = 0.2
+    checkpoint = "../model/edm2-img64-xl-0671088-0.040.pkl"
+    seed = 42
 
-    # Write hyperparameters to info file:
-    with open(outdir + "/info.txt", "w") as f:
-        f.write(f"batch_size = {batch_size}")
-        f.write(f"tau_a_range = {tau_a_range}")
-        f.write(f"tau_r_range = {tau_r_range}")
-        f.write(f"resolution = {resolution}")
-        f.write(f"ki = {ki}")
-        f.write(f"kp = {kp}")
-        f.write(f"alpha = {alpha}")
+    # Set seed
+    torch.random.manual_seed(seed)
 
     # Load model
-    with dnnlib.util.open_url("../model/edm2-img64-xl-0671088-0.040.pkl") as f:
+    with dnnlib.util.open_url(checkpoint) as f:
         data = pickle.load(f)
     model = data["ema"].to(device)
 
     # Create SDE
     sde_ = sde_lib.EDMSDE().to(device)
-    rsde = sde_.get_reverse_sde(model, ode_threshold=0.2).to(device)
+    rsde = sde_.get_reverse_sde(model, ode_threshold=ode_threshold).to(device)
 
     # Sample noise and labels
     x = torch.zeros((batch_size, model.img_channels, model.img_resolution, model.img_resolution)).to(device)
     noise = torch.randn_like(x) * 80
     labels = torch.eye(model.label_dim, device=device)[
         torch.randint(high=model.label_dim, size=(batch_size,), device=device)]
+
+    # Write hyperparameters to info file:
+    with open(outdir + "/info.txt", "w") as f:
+        f.write(f"batch_size = {batch_size}\n")
+        f.write(f"tau_a_range = {tau_a_range}\n")
+        f.write(f"tau_r_range = {tau_r_range}\n")
+        f.write(f"resolution = {resolution}\n")
+        f.write(f"ki = {ki}\n")
+        f.write(f"kp = {kp}\n")
+        f.write(f"alpha = {alpha}\n")
+        f.write(f"ode_threshold = {ode_threshold}\n")
+        f.write(f"checkpoint = {checkpoint}\n")
+        f.write(f"labels = {[float(torch.argmax(label)) for label in labels]}")
 
     # Create evaluation grid
     grid = create_grid(tau_a_range, tau_r_range, resolution)
@@ -133,7 +144,7 @@ if __name__ == "__main__":
         noise=noise,
         labels=labels,
         sde=rsde,
-        seed=42,
+        seed=seed,
         grid=grid,
         device=device,
         encoder=data.encoder,

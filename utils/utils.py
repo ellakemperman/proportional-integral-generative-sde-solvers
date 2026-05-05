@@ -1,5 +1,6 @@
 import torch
 from torchvision.models import inception_v3, Inception_V3_Weights
+import matplotlib.pyplot as plt
 
 
 def broadcast_vector(vector: torch.Tensor, tensor: torch.Tensor) -> torch.Tensor:
