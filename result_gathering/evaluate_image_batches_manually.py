@@ -85,6 +85,5 @@ def plot_ratings(tau_a_range: tuple[float, float], tau_r_range: tuple[float, flo
 
 if __name__ == "__main__":
     target = "../data/tolerance_grid/eval"
-    # evaluate_images(target, 4)
-    df = pd.read_csv(target + "/ratings.csv")
+    df = evaluate_images(target, 4)
     plot_ratings((0.1, 1), (0.5, 10), 20, df, target)

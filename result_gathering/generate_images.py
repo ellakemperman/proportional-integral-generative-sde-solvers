@@ -79,6 +79,7 @@ def generate_images(
         seed: int = 0,
         n_samples: int = 50000,
         batch_size: int = 64,
+        ode_threshold: float = 0.2,
         model_url: str = "../model/edm2-img64-xl-0671088-0.040.pkl",
         device: torch.device | str = "cuda",
         callback: PIDataLogger | None = None
@@ -96,8 +97,10 @@ def generate_images(
     if encoder is None:
         encoder = dnnlib.util.construct_class_by_name(class_name='training.encoders.StandardRGBEncoder')
 
-    sde_ = EDMSDE().to(device).get_reverse_sde(model)
+    sde_ = EDMSDE().to(device).get_reverse_sde(model, ode_threshold=ode_threshold)
     solver = solver_func(sde_).to(device)
+
+    nfe = 0
 
     # Sampling loop
     for i in tqdm.tqdm(range(0, n_samples, batch_size)):
@@ -110,7 +113,7 @@ def generate_images(
 
         # Get noise and labels
         rng = StackedRandomGenerator(device, batch_seeds)
-        noise = rng.randn((batch_size, model.img_channels, model.img_resolution, model.img_resolution), device=device)
+        noise = rng.randn((batch_size, model.img_channels, model.img_resolution, model.img_resolution), device=device) * 80
         labels = torch.eye(model.label_dim, device=device)[rng.randint(model.label_dim, size=[len(batch_seeds)], device=device)]
 
         # Sample using generated noise
@@ -124,20 +127,25 @@ def generate_images(
         if callback is not None:
             callback.write()
 
+        nfe += sde_.nfe
+        sde_.reset()
+
+    return nfe / n_samples
+
 
 def get_pi_solver_func(max_iter: int) -> Callable[[SDE], Solver]:
     return lambda sde_: PISolver(
         sde_,
         ki=0.3,
         kp=0.1,
-        tau_a=0.4,
-        tau_r=3,
+        tau_a=0.147,
+        tau_r=9,
         alpha=0.9,
-        h_start=3,
-        max_decrease=0.2,
-        max_increase=5,
+        h_start=27,
+        max_decrease=0.05,
+        max_increase=10,
         max_iter=max_iter,
-        interval=(80, 0.002),
+        interval=(80, 0),
     )
 
 
@@ -145,16 +153,16 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     batch_size = 48
-    n_samples = 1000
-    max_iter = 150
+    n_samples = 10000
+    max_iter = 100
 
-    image_out_path = "../data/image_testing/pi/test/images/"
-    data_out_path = "../data/image_testing/pi/test/data/"
+    image_out_path = "../data/image_testing/pi/50NFE/images/"
+    data_out_path = "../data/image_testing/pi/50NFE/data/"
 
     pi_constructor = get_pi_solver_func(max_iter)
     logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
 
-    generate_images(
+    nfe = generate_images(
         solver_func=pi_constructor,
         outdir=image_out_path,
         n_samples=n_samples,
@@ -162,3 +170,7 @@ if __name__ == "__main__":
         device=device,
         callback=logger
     )
+    print(nfe)
+
+    with open(data_out_path + "nfe.txt", "w") as f:
+        f.write("nfe = " + str(nfe))

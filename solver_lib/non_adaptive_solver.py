@@ -51,7 +51,7 @@ class HeunSolver(EulerMarayumaSolver):
             dx_euler = self.sde.step(x, t, dt, labels=labels)
 
             if i < (self._time_steps.shape[0] - 1):
-                dx_heun = self.sde.step(x + dx_euler, t + dt, self._time_steps[i + 1], labels=labels)
+                dx_heun = self.sde.step(x + dx_euler, t + dt, dt, labels=labels)
                 x += 0.5 * (dx_euler + dx_heun)
             else:
                 x += dx_euler
