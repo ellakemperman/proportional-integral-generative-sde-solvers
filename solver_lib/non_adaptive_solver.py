@@ -62,6 +62,19 @@ class HeunSolver(EulerMarayumaSolver):
         return x
 
 
+def get_edm_schedule(
+        n_steps: int,
+        t_min: float = 0,
+        t_max: float = 80,
+        rho: float = 7
+):
+    step_indices = torch.arange(n_steps)
+    t_steps = (t_max ** (1 / rho) + step_indices / (n_steps - 1)
+               * (t_min ** (1 / rho) - t_max ** (1 / rho))) ** rho
+    discretisation = torch.cat([t_steps, torch.zeros_like(t_steps[:1])])
+    return discretisation
+
+
 # From EDM2: https://github.com/NVlabs/edm2/tree/main
 def edm_sampler(
     net, noise, labels=None, gnet=None,
@@ -78,9 +91,7 @@ def edm_sampler(
         return ref_Dx.lerp(Dx, guidance)
 
     # Time step discretization.
-    step_indices = torch.arange(num_steps, dtype=dtype, device=noise.device)
-    t_steps = (sigma_max ** (1 / rho) + step_indices / (num_steps - 1) * (sigma_min ** (1 / rho) - sigma_max ** (1 / rho))) ** rho
-    t_steps = torch.cat([t_steps, torch.zeros_like(t_steps[:1])]) # t_N = 0
+    t_steps = get_edm_schedule(num_steps, sigma_min, sigma_max, rho).to(noise.device)
 
     # Main sampling loop.
     x_next = noise.to(dtype) * t_steps[0]

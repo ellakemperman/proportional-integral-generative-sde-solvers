@@ -149,26 +149,39 @@ def get_pi_solver_func(max_iter: int) -> Callable[[SDE], Solver]:
     )
 
 
+def get_em_solver_func(nfe: int, t_min: float = 0.002, t_max: float = 80, rho: float = 7):
+    print(get_edm_schedule(nfe, t_min, t_max, rho))
+    return lambda sde: EulerMarayumaSolver(
+        sde,
+        get_edm_schedule(nfe, t_min, t_max, rho)
+    )
+
+
 if __name__ == "__main__":
+    t_min, t_max = 0.002, 80
+    n_steps = 50
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     batch_size = 48
     n_samples = 10000
     max_iter = 100
 
-    image_out_path = "../data/image_testing/pi/50NFE/images/"
-    data_out_path = "../data/image_testing/pi/50NFE/data/"
+    image_out_path = "../data/image_testing/em/50NFE/images/"
+    data_out_path = "../data/image_testing/em/50NFE/data/"
 
-    pi_constructor = get_pi_solver_func(max_iter)
-    logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
+    # pi_constructor = get_pi_solver_func(max_iter)
+    # logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
+    constructor = get_em_solver_func(n_steps, t_min, t_max)
+
 
     nfe = generate_images(
-        solver_func=pi_constructor,
+        solver_func=constructor,
         outdir=image_out_path,
         n_samples=n_samples,
         batch_size=batch_size,
         device=device,
-        callback=logger
+        callback=None
     )
     print(nfe)
 
