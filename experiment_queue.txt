@@ -1,0 +1,7 @@
+Run everything 50 NFE ODE
+Run everything at 100 NFE
+Run everything at 150 NFE
+
+Run Gotta Go Fast on all paradigms
+
+Batch normalisation PI on all paradigmsB

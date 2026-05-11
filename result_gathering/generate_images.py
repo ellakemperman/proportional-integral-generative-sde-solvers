@@ -80,11 +80,12 @@ def generate_images(
         n_samples: int = 50000,
         batch_size: int = 64,
         ode_threshold: float = 0.2,
+        ode: bool = True,
         model_url: str = "../model/edm2-img64-xl-0671088-0.040.pkl",
         device: torch.device | str = "cuda",
         callback: PIDataLogger | None = None
 ):
-    os.makedirs(outdir, exist_ok=True)
+    os.makedirs(outdir)
     seeds = range(seed, n_samples + seed)
 
     # Load model
@@ -97,7 +98,7 @@ def generate_images(
     if encoder is None:
         encoder = dnnlib.util.construct_class_by_name(class_name='training.encoders.StandardRGBEncoder')
 
-    sde_ = EDMSDE().to(device).get_reverse_sde(model, ode_threshold=ode_threshold)
+    sde_ = EDMSDE(ode=ode).to(device).get_reverse_sde(model, ode_threshold=ode_threshold)
     solver = solver_func(sde_).to(device)
 
     nfe = 0
@@ -138,42 +139,46 @@ def get_pi_solver_func(max_iter: int) -> Callable[[SDE], Solver]:
         sde_,
         ki=0.3,
         kp=0.1,
-        tau_a=0.147,
-        tau_r=9,
+        tau_a=0.289,
+        tau_r=1.95,
         alpha=0.9,
-        h_start=27,
+        h_start=12,
         max_decrease=0.05,
-        max_increase=10,
+        max_increase=2,
         max_iter=max_iter,
         interval=(80, 0),
     )
 
 
 def get_em_solver_func(nfe: int, t_min: float = 0.002, t_max: float = 80, rho: float = 7):
-    print(get_edm_schedule(nfe, t_min, t_max, rho))
     return lambda sde: EulerMarayumaSolver(
         sde,
         get_edm_schedule(nfe, t_min, t_max, rho)
     )
 
 
+def get_heun_solver_func(nfe: int, t_min: float = 0.002, t_max: float = 80, rho: float = 7):
+    return lambda sde: HeunSolver(
+        sde,
+        get_edm_schedule(nfe // 2, t_min, t_max, rho)
+    )
+
+
 if __name__ == "__main__":
     t_min, t_max = 0.002, 80
-    n_steps = 50
+    n_steps = 100
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     batch_size = 48
     n_samples = 10000
-    max_iter = 100
+    max_iter = 150
 
-    image_out_path = "../data/image_testing/em/50NFE/images/"
-    data_out_path = "../data/image_testing/em/50NFE/data/"
+    image_out_path = "../data/image_testing/heun/100NFE/images/"
+    data_out_path = "../data/image_testing/heun/100NFE/data/"
 
-    # pi_constructor = get_pi_solver_func(max_iter)
     # logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
-    constructor = get_em_solver_func(n_steps, t_min, t_max)
-
+    constructor = get_heun_solver_func(n_steps)
 
     nfe = generate_images(
         solver_func=constructor,
@@ -181,9 +186,11 @@ if __name__ == "__main__":
         n_samples=n_samples,
         batch_size=batch_size,
         device=device,
+        ode=False,
         callback=None
     )
     print(nfe)
 
+    os.makedirs(data_out_path, exist_ok=True)
     with open(data_out_path + "nfe.txt", "w") as f:
         f.write("nfe = " + str(nfe))
