@@ -48,10 +48,11 @@ class HeunSolver(EulerMarayumaSolver):
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         for i, dt in enumerate(self._time_steps):
             t = broadcast_vector((self._discretisation[i] * torch.ones(x.shape[0])).to(self._device), x)
-            dx_euler = self.sde.step(x, t, dt, labels=labels)
+            w = torch.randn_like(x)
+            dx_euler = self.sde.step(x, t, dt, w=w, labels=labels)
 
             if i < (self._time_steps.shape[0] - 1):
-                dx_heun = self.sde.step(x + dx_euler, t + dt, dt, labels=labels)
+                dx_heun = self.sde.step(x + dx_euler, t + dt, dt, w=w, labels=labels)
                 x += 0.5 * (dx_euler + dx_heun)
             else:
                 x += dx_euler

@@ -79,6 +79,9 @@ class PISolver(Solver):
             # Perform Euler and Heun step
             w = torch.randn_like(x)
             dx_euler = self.sde.step(x, t, h, w, labels=labels[not_finished])
+
+            # Multiplying by ((t + h) > 0) to make sure that this equals the euler step for points
+            # taking the final step, so network not evaluated at t=0.
             dx_heun = self.sde.step(x + dx_euler * ((t + h) > 0), t + h * ((t + h) > 0), h, w, labels=labels[not_finished])
 
             # Compute first and second order x
