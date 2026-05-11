@@ -6,6 +6,7 @@ import pandas as pd
 import tqdm
 
 import dnnlib
+import utils
 from sde_lib import EDMSDE, SDE
 from solver_lib import *
 
@@ -74,7 +75,7 @@ class StackedRandomGenerator:
 
 
 def generate_images(
-        solver_func: Callable[[SDE], [Solver]],
+        solver_func: Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver],
         outdir: str,
         seed: int = 0,
         n_samples: int = 50000,
@@ -88,18 +89,11 @@ def generate_images(
     os.makedirs(outdir)
     seeds = range(seed, n_samples + seed)
 
-    # Load model
-    with dnnlib.util.open_url(model_url) as f:
-        data = pickle.load(f)
-    model = data["ema"].to(device)
+    model, encoder = utils.load_edm_checkpoint(model_url)
+    model.to(device)
 
-    # Load encoder
-    encoder = data.get('encoder', None)
-    if encoder is None:
-        encoder = dnnlib.util.construct_class_by_name(class_name='training.encoders.StandardRGBEncoder')
-
-    sde_ = EDMSDE(ode=ode).to(device).get_reverse_sde(model, ode_threshold=ode_threshold)
-    solver = solver_func(sde_).to(device)
+    sde = EDMSDE(ode=ode).to(device).get_reverse_sde(model, ode_threshold=ode_threshold)
+    solver = solver_func(sde, model).to(device)
 
     nfe = 0
 
@@ -128,15 +122,17 @@ def generate_images(
         if callback is not None:
             callback.write()
 
-        nfe += sde_.nfe
-        sde_.reset()
+        nfe += sde.nfe
+        sde.reset()
 
     return nfe / n_samples
 
 
-def get_pi_solver_func(max_iter: int) -> Callable[[SDE], Solver]:
-    return lambda sde_: PISolver(
-        sde_,
+def get_pi_solver_func(
+        max_iter: int
+) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
+    return lambda sde, _: PISolver(
+        sde,
         ki=0.3,
         kp=0.1,
         tau_a=0.289,
@@ -150,17 +146,39 @@ def get_pi_solver_func(max_iter: int) -> Callable[[SDE], Solver]:
     )
 
 
-def get_em_solver_func(nfe: int, t_min: float = 0.002, t_max: float = 80, rho: float = 7):
-    return lambda sde: EulerMarayumaSolver(
+def get_em_solver_func(
+        nfe: int,
+        t_min: float = 0.002,
+        t_max: float = 80,
+        rho: float = 7
+) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
+    return lambda sde, _: EulerMarayumaSolver(
         sde,
         get_edm_schedule(nfe, t_min, t_max, rho)
     )
 
 
-def get_heun_solver_func(nfe: int, t_min: float = 0.002, t_max: float = 80, rho: float = 7):
-    return lambda sde: HeunSolver(
+def get_heun_solver_func(
+        nfe: int,
+        t_min: float = 0.002,
+        t_max: float = 80,
+        rho: float = 7
+) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
+    return lambda sde, _: HeunSolver(
         sde,
         get_edm_schedule(nfe // 2, t_min, t_max, rho)
+    )
+
+
+def get_edm_solver_func(
+        nfe: int,
+        t_min: float = 0.002,
+        t_max: float = 80,
+        rho: float = 7
+) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
+    return lambda sde, model: EDMSolver(
+        get_edm_schedule(nfe // 2, t_min, t_max, rho),
+        model
     )
 
 

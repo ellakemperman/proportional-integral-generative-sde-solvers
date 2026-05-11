@@ -70,51 +70,88 @@ def get_edm_schedule(
         rho: float = 7
 ):
     step_indices = torch.arange(n_steps)
-    t_steps = (t_max ** (1 / rho) + step_indices / (n_steps - 1)
+    self._discretisation = (t_max ** (1 / rho) + step_indices / (n_steps - 1)
                * (t_min ** (1 / rho) - t_max ** (1 / rho))) ** rho
-    discretisation = torch.cat([t_steps, torch.zeros_like(t_steps[:1])])
+    discretisation = torch.cat([self._discretisation, torch.zeros_like(self._discretisation[:1])])
     return discretisation
 
 
-# From EDM2: https://github.com/NVlabs/edm2/tree/main
-def edm_sampler(
-    net, noise, labels=None, gnet=None,
-    num_steps=32, sigma_min=0.002, sigma_max=80, rho=7, guidance=1,
-    S_churn=0, S_min=0, S_max=float('inf'), S_noise=1,
-    dtype=torch.float32, randn_like=torch.randn_like,
-):
-    # Guided denoiser.
-    def denoise(x, t):
-        Dx = net(x, t, labels).to(dtype)
-        if guidance == 1:
+# Adapted from EDM2: https://github.com/NVlabs/edm2/tree/main
+class EDMSolver(Solver):
+    """
+    Implementation of the sampler implemented in the paper Elucidating the design space for
+    diffusion models (EDM). Is not strictly an SDE solver. This class ignores the SDE completely
+    and just solves an ODE with potentially some parametrised noise added. Class created for
+    compatibility with the rest of the framework of this repository.
+    """
+
+    def __init__(
+            self,
+            discretisation: torch.Tensor,
+            model: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor],
+            g_model: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor] = None,
+            guidance: bool = False,
+            S_churn: float = 0,
+            S_min: float = 0,
+            S_max: float = float('inf'),
+            S_noise: float = 1,
+            dtype: torch.dtype = torch.float32
+    ):
+        r"""
+        Construct the EDM solver.
+
+        :param discretisation: The time steps :math:`(t_0, t_1, ..., t_n)` the solver will solve the SDE over.
+        :param model: The denoiser network :math:`D_\theta(x, t)`
+        :param g_model: The optional guidance network.
+        :param guidance: True if guidance should be enabled and a guidance network is passed.
+        :param S_churn: How much the next time step will be upscaled for churning.
+        :param S_min: Minimum time step for enabling churn.
+        :param S_max: Maximum time step for enabling churn.
+        :param S_noise: How much noise should be added when churn.
+        :param dtype: Dtype of all tensors.
+        """
+        super().__init__(SDE())
+        
+        self._discretisation = discretisation
+        self._model = model
+        self._g_model = g_model
+        self._guidance = guidance
+        self._S_churn = S_churn
+        self._S_min = S_min
+        self._S_max = S_max
+        self._S_noise = S_noise
+        self._dtype = dtype
+    
+    def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
+              callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
+        n_steps = self._discretisation.shape[0]
+        x_next = x.to(self._dtype) * self._discretisation[0]
+        for i, (t_cur, t_next) in enumerate(zip(self._discretisation[:-1], self._discretisation[1:])):  # 0, ..., N-1
+            x_cur = x_next
+
+            # Increase noise temporarily.
+            if self._S_churn > 0 and self._S_min <= t_cur <= self._S_max:
+                gamma = min(self._S_churn / n_steps, 2**0.5 - 1)
+                t_hat = t_cur + gamma * t_cur
+                x_hat = x_cur + (t_hat ** 2 - t_cur ** 2).sqrt() * self._S_noise * torch.randn_like(x_cur)
+            else:
+                t_hat = t_cur
+                x_hat = x_cur
+
+            # Euler step.
+            d_cur = (x_hat - self.denoise(x_hat, t_hat)) / t_hat
+            x_next = x_hat + (t_next - t_hat) * d_cur
+
+            # Apply 2nd order correction.
+            if i < n_steps - 1:
+                d_prime = (x_next - self.denoise(x_next, t_next)) / t_next
+                x_next = x_hat + (t_next - t_hat) * (0.5 * d_cur + 0.5 * d_prime)
+
+        return x_next
+    
+    def denoise(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
+        Dx = self._model(x, t, labels).to(self._dtype)
+        if not self._guidance:
             return Dx
-        ref_Dx = gnet(x, t, labels).to(dtype)
-        return ref_Dx.lerp(Dx, guidance)
-
-    # Time step discretization.
-    t_steps = get_edm_schedule(num_steps, sigma_min, sigma_max, rho).to(noise.device)
-
-    # Main sampling loop.
-    x_next = noise.to(dtype) * t_steps[0]
-    for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])): # 0, ..., N-1
-        x_cur = x_next
-
-        # Increase noise temporarily.
-        if S_churn > 0 and S_min <= t_cur <= S_max:
-            gamma = min(S_churn / num_steps, np.sqrt(2) - 1)
-            t_hat = t_cur + gamma * t_cur
-            x_hat = x_cur + (t_hat ** 2 - t_cur ** 2).sqrt() * S_noise * randn_like(x_cur)
-        else:
-            t_hat = t_cur
-            x_hat = x_cur
-
-        # Euler step.
-        d_cur = (x_hat - denoise(x_hat, t_hat)) / t_hat
-        x_next = x_hat + (t_next - t_hat) * d_cur
-
-        # Apply 2nd order correction.
-        if i < num_steps - 1:
-            d_prime = (x_next - denoise(x_next, t_next)) / t_next
-            x_next = x_hat + (t_next - t_hat) * (0.5 * d_cur + 0.5 * d_prime)
-
-    return x_next
+        ref_Dx = self._g_model(x, t, labels).to(self._dtype)
+        return ref_Dx.lerp(Dx, self._guidance)

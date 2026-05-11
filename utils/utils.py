@@ -1,10 +1,28 @@
+from typing import Callable
+import pickle
+
 import torch
 from torchvision.models import inception_v3, Inception_V3_Weights
-import matplotlib.pyplot as plt
+
+import dnnlib
 
 
 def broadcast_vector(vector: torch.Tensor, tensor: torch.Tensor) -> torch.Tensor:
     return vector.view(tensor.shape[0], *([1] * (tensor.dim() - 1)))
+
+
+def load_edm_checkpoint(url: str) -> tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor], Callable[[torch.Tensor], torch.Tensor]]:
+    # Load model
+    with dnnlib.util.open_url(url) as f:
+        data = pickle.load(f)
+    model = data["ema"]
+
+    # Load encoder
+    encoder = data.get('encoder', None)
+    if encoder is None:
+        encoder = dnnlib.util.construct_class_by_name(class_name='training.encoders.StandardRGBEncoder')
+
+    return model, encoder
 
 
 def calculate_fid(X: torch.Tensor, X_hat: torch.Tensor) -> float:
