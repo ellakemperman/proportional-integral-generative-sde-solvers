@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 import torch
 
-
 from generate_tolerance_nfe_relation import create_grid
+from utils import plot_images
 
 
 def image_path_iterator(target_path: pathlib.Path) -> list[tuple[str, list[str]]]:
@@ -32,18 +32,7 @@ def evaluate_images(target_path: str, n_cols: int = 4, seed = 42):
 
     for i, (eval_point, images) in enumerate(shuffled_paths):
         # Plot images
-        fig, axes = plt.subplots(len(images) // n_cols, n_cols)
-        for index, image_path in enumerate(images):
-            j = index % n_cols
-            k = index // n_cols
-
-            image_arr = plt.imread(image_path)
-
-            axes[j][k].imshow(image_arr)
-            axes[j][k].axis("off")
-
-        fig.tight_layout()
-        fig.show()
+        plot_images(images, n_cols).show()
 
         # Get image rating
         while True:

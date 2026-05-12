@@ -2,7 +2,7 @@
 from typing import Callable
 import torch
 
-from sde_lib import SDE
+from sde_lib import SDE, EDMSDE
 from utils import broadcast_vector
 
 from solver_lib.solvers import Solver
@@ -65,14 +65,14 @@ class HeunSolver(EulerMarayumaSolver):
 
 def get_edm_schedule(
         n_steps: int,
-        t_min: float = 0,
+        t_min: float = 0.002,
         t_max: float = 80,
         rho: float = 7
 ):
     step_indices = torch.arange(n_steps)
-    self._discretisation = (t_max ** (1 / rho) + step_indices / (n_steps - 1)
+    discretisation = (t_max ** (1 / rho) + step_indices / (n_steps - 1)
                * (t_min ** (1 / rho) - t_max ** (1 / rho))) ** rho
-    discretisation = torch.cat([self._discretisation, torch.zeros_like(self._discretisation[:1])])
+    discretisation = torch.cat([discretisation, torch.zeros_like(discretisation[:1])])
     return discretisation
 
 
@@ -90,7 +90,7 @@ class EDMSolver(Solver):
             discretisation: torch.Tensor,
             model: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor],
             g_model: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor] = None,
-            guidance: bool = False,
+            guidance: int = 1,
             S_churn: float = 0,
             S_min: float = 0,
             S_max: float = float('inf'),
@@ -110,7 +110,7 @@ class EDMSolver(Solver):
         :param S_noise: How much noise should be added when churn.
         :param dtype: Dtype of all tensors.
         """
-        super().__init__(SDE())
+        super().__init__(EDMSDE())
         
         self._discretisation = discretisation
         self._model = model
@@ -124,8 +124,8 @@ class EDMSolver(Solver):
     
     def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
-        n_steps = self._discretisation.shape[0]
-        x_next = x.to(self._dtype) * self._discretisation[0]
+        n_steps = self._discretisation.shape[0] - 1
+        x_next = x.to(self._dtype)
         for i, (t_cur, t_next) in enumerate(zip(self._discretisation[:-1], self._discretisation[1:])):  # 0, ..., N-1
             x_cur = x_next
 
@@ -139,19 +139,25 @@ class EDMSolver(Solver):
                 x_hat = x_cur
 
             # Euler step.
-            d_cur = (x_hat - self.denoise(x_hat, t_hat)) / t_hat
+            d_cur = (x_hat - self.denoise(x_hat, t_hat, labels)) / t_hat
             x_next = x_hat + (t_next - t_hat) * d_cur
 
             # Apply 2nd order correction.
             if i < n_steps - 1:
-                d_prime = (x_next - self.denoise(x_next, t_next)) / t_next
+                d_prime = (x_next - self.denoise(x_next, t_next, labels)) / t_next
                 x_next = x_hat + (t_next - t_hat) * (0.5 * d_cur + 0.5 * d_prime)
 
         return x_next
     
     def denoise(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         Dx = self._model(x, t, labels).to(self._dtype)
-        if not self._guidance:
+        if self._guidance == 1:
             return Dx
         ref_Dx = self._g_model(x, t, labels).to(self._dtype)
         return ref_Dx.lerp(Dx, self._guidance)
+
+    def to(self, device):
+        super().to(device)
+        self._discretisation =  self._discretisation.to(device)
+        self._model = self._model.to(device)
+        return self

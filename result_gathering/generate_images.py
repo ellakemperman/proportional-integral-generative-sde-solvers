@@ -135,12 +135,12 @@ def get_pi_solver_func(
         sde,
         ki=0.3,
         kp=0.1,
-        tau_a=0.289,
-        tau_r=1.95,
+        tau_a=0.147,
+        tau_r=9,
         alpha=0.9,
-        h_start=12,
+        h_start=27,
         max_decrease=0.05,
-        max_increase=2,
+        max_increase=1.1,
         max_iter=max_iter,
         interval=(80, 0),
     )
@@ -184,7 +184,7 @@ def get_edm_solver_func(
 
 if __name__ == "__main__":
     t_min, t_max = 0.002, 80
-    n_steps = 100
+    n_steps = 50
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -192,11 +192,11 @@ if __name__ == "__main__":
     n_samples = 10000
     max_iter = 150
 
-    image_out_path = "../data/image_testing/heun/100NFE/images/"
-    data_out_path = "../data/image_testing/heun/100NFE/data/"
+    image_out_path = "../data/image_testing/pi/50NFE_2/images/"
+    data_out_path = "../data/image_testing/pi/50NFE_2/data/"
 
-    # logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
-    constructor = get_heun_solver_func(n_steps)
+    logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
+    constructor = get_pi_solver_func(n_steps)
 
     nfe = generate_images(
         solver_func=constructor,
@@ -204,8 +204,9 @@ if __name__ == "__main__":
         n_samples=n_samples,
         batch_size=batch_size,
         device=device,
+        ode_threshold=0.5,
         ode=False,
-        callback=None
+        callback=logger
     )
     print(nfe)
 
