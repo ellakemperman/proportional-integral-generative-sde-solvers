@@ -8,8 +8,8 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 import sde_lib
+from solver_lib import PISolver, PISolver2
 import dnnlib
-from solver_lib import PISolver
 
 
 def create_grid(tau_a_range: tuple[float, float], tau_r_range: tuple[float, float], resolution: int) -> tuple[
@@ -45,6 +45,8 @@ def apply_over_grid(
         device: torch.device | str,
         encoder,
         outdir: str,
+        ode_threshold: float,
+        n_ode_steps: int,
         ki: float,
         kp: float,
         alpha: float) -> tuple[torch.Tensor, torch.Tensor]:
@@ -60,8 +62,10 @@ def apply_over_grid(
 
             reject_counter = RejectCounter()
 
-            solver = PISolver(
-                sde,
+            solver = PISolver2.create_heun_end_pi_solver(
+                rsde,
+                ode_threshold=ode_threshold,
+                n_ode_steps=n_ode_steps,
                 ki=ki,
                 kp=kp,
                 tau_a=tau_a,
@@ -70,15 +74,17 @@ def apply_over_grid(
                 h_start=0.5,
                 max_decrease=0.05,
                 max_increase=10,
-                interval=(80, 0),
-                abs_error=False,
+                interval=(80, 0.002),
+                abs_error=False
             ).to(device)
+
             images = solver.solve(noise.clone(), labels=labels, callback=reject_counter)
 
-            for k, image in enumerate(encoder.decode(images).permute(0, 2, 3, 1).cpu().numpy()):
+            for k, (image, label) in enumerate(zip(encoder.decode(images).permute(0, 2, 3, 1).cpu().numpy(), labels)):
+                label = torch.argmax(label)
                 dir_path = os.path.join(outdir, f"abs_{round(tau_a, 3)}_rel_{round(tau_r, 3)}")
                 os.makedirs(dir_path, exist_ok=True)
-                PIL.Image.fromarray(image, "RGB").save(os.path.join(dir_path, f"{k}.png"))
+                PIL.Image.fromarray(image, "RGB").save(os.path.join(dir_path, f"{k}_{label}.png"))
 
             nfes[i, j] = sde.nfe
             reject_rate[i, j] = reject_counter.reject_rate()
@@ -90,19 +96,20 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Out path
-    outdir = "../data/tolerance_grid/eval2"
+    outdir = "../data/tolerance_grid/eval_pisolver_2"
     os.makedirs(outdir, exist_ok=True)
 
     # hyper parameters
-    batch_size = 16
-    tau_a_range = (0.1, 1)
+    batch_size = 64
+    tau_a_range = (0.01, 0.5)
     tau_r_range = (0.5, 10)
     resolution = 20
     ki = 0.3
     kp = 0.1
     alpha = 0.9
     ode_threshold = 0.2
-    checkpoint = "../model/edm2-img64-xl-0671088-0.040.pkl"
+    n_ode_steps = 3
+    checkpoint = "model/edm2-img64-xl-0671088-0.040.pkl"
     seed = 42
 
     # Set seed
@@ -115,7 +122,7 @@ if __name__ == "__main__":
 
     # Create SDE
     sde_ = sde_lib.EDMSDE().to(device)
-    rsde = sde_.get_reverse_sde(model, ode_threshold=ode_threshold).to(device)
+    rsde = sde_.get_reverse_sde(model).to(device)
 
     # Sample noise and labels
     x = torch.zeros((batch_size, model.img_channels, model.img_resolution, model.img_resolution)).to(device)
@@ -133,6 +140,7 @@ if __name__ == "__main__":
         f.write(f"kp = {kp}\n")
         f.write(f"alpha = {alpha}\n")
         f.write(f"ode_threshold = {ode_threshold}\n")
+        f.write(f"n_ode_steps = {n_ode_steps}\n")
         f.write(f"checkpoint = {checkpoint}\n")
         f.write(f"labels = {[float(torch.argmax(label)) for label in labels]}")
 
@@ -149,6 +157,8 @@ if __name__ == "__main__":
         device=device,
         encoder=data.encoder,
         outdir=outdir,
+        ode_threshold=ode_threshold,
+        n_ode_steps=n_ode_steps,
         ki=ki,
         kp=kp,
         alpha=alpha

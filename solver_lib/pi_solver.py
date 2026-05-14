@@ -2,6 +2,7 @@
 from typing import Callable
 import torch
 
+from solver_lib import HeunSolver, get_edm_schedule
 from solver_lib.solvers import Solver
 from sde_lib import SDE
 from utils import broadcast_vector
@@ -90,7 +91,7 @@ class PISolver(Solver):
 
             # Compute extrapolated error
             old_error = error.clone()
-            new_error = self._error(x_first, x_second)
+            new_error = self._error(x_first, x_second, t)
             error[not_finished] = new_error
 
             # Update x and t
@@ -117,7 +118,7 @@ class PISolver(Solver):
         print(reject_count / (reject_count + not_reject_count))
         return x_full
 
-    def _error(self, x_first: torch.Tensor, x_second: torch.Tensor) -> torch.Tensor:
+    def _error(self, x_first: torch.Tensor, x_second: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         """
         Computes the local extrapolated error by computing the MSE divided by the tolerance.
 
@@ -127,7 +128,7 @@ class PISolver(Solver):
         """
         d = sum(x_first.shape[1:])
         if d != 1 and not self._abs_error:
-            norm = broadcast_vector(self._tau_a + self._tau_r * torch.std(x_second.view(x_second.shape[0], -1), dim=1), x_second)
+            norm = self._tau_a + self._tau_r * t
         elif self._abs_error:
             norm = self._tau_a + self._tau_r * torch.abs(x_second)
         else:
@@ -153,3 +154,43 @@ class PISolver(Solver):
         self._max_increase = self._max_increase.to(self._device)
         self._max_decrease = self._max_decrease.to(self._device)
         return self
+
+
+class PISolver2(PISolver):
+
+    def __init__(
+            self,
+            sde: SDE,
+            ode_threshold: float,
+            ode_solver: Solver,
+            interval: tuple[float, float] = (80, 0.002),
+            **kwargs
+    ):
+        pi_interval = (interval[0], ode_threshold)
+        super().__init__(sde, interval=pi_interval, **kwargs)
+
+        self._ode_solver = ode_solver
+
+    def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
+              callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
+        x_sde = super().solve(x, labels, callback)
+        self.sde.ode = True
+        return self._ode_solver.solve(x_sde, labels)
+
+    def to(self, device: str) -> Solver:
+        super().to(device)
+        self._ode_solver.to(device)
+        return self
+
+    @classmethod
+    def create_heun_end_pi_solver(
+            cls,
+            sde: SDE,
+            ode_threshold: float,
+            n_ode_steps: int = 2,
+            rho: float = 7,
+            interval: tuple[float, float] = (80, 0.002),
+            **kwargs):
+        discretisation = get_edm_schedule(n_ode_steps, interval[1], ode_threshold, rho=rho)
+        heun_solver = HeunSolver(sde, discretisation)
+        return cls(sde, ode_threshold, heun_solver, interval, **kwargs)

@@ -1,11 +1,9 @@
-import pickle
 import os
 import torch
 import PIL.Image
 import pandas as pd
 import tqdm
 
-import dnnlib
 import utils
 from sde_lib import EDMSDE, SDE
 from solver_lib import *
@@ -82,11 +80,11 @@ def generate_images(
         batch_size: int = 64,
         ode_threshold: float = 0.2,
         ode: bool = True,
-        model_url: str = "../model/edm2-img64-xl-0671088-0.040.pkl",
+        model_url: str = "model/edm2-img64-xl-0671088-0.040.pkl",
         device: torch.device | str = "cuda",
         callback: PIDataLogger | None = None
 ):
-    os.makedirs(outdir)
+    os.makedirs(outdir, exist_ok=True)
     seeds = range(seed, n_samples + seed)
 
     model, encoder = utils.load_edm_checkpoint(model_url)
@@ -184,19 +182,20 @@ def get_edm_solver_func(
 
 if __name__ == "__main__":
     t_min, t_max = 0.002, 80
-    n_steps = 50
+    n_steps = 100
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     batch_size = 48
-    n_samples = 10000
+    n_samples = 4576
+    seed = 5424
     max_iter = 150
 
-    image_out_path = "../data/image_testing/pi/50NFE_2/images/"
-    data_out_path = "../data/image_testing/pi/50NFE_2/data/"
+    image_out_path = "data/image_testing/edm/100NFE/images/"
+    data_out_path = "data/image_testing/edm/100NFE/data/"
 
-    logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
-    constructor = get_pi_solver_func(n_steps)
+    # logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
+    constructor = get_edm_solver_func(n_steps)
 
     nfe = generate_images(
         solver_func=constructor,
@@ -204,9 +203,9 @@ if __name__ == "__main__":
         n_samples=n_samples,
         batch_size=batch_size,
         device=device,
+        seed=seed,
         ode_threshold=0.5,
-        ode=False,
-        callback=logger
+        ode=False
     )
     print(nfe)
 

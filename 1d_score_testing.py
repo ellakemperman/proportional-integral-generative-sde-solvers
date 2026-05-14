@@ -8,7 +8,6 @@ import tqdm
 
 import pandas as pd
 import torch
-from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
 
