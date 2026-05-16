@@ -74,6 +74,7 @@ def apply_over_grid(
                 h_start=0.5,
                 max_decrease=0.05,
                 max_increase=10,
+                max_iter=1000,
                 interval=(80, 0.002),
                 abs_error=False
             ).to(device)
@@ -96,12 +97,12 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Out path
-    outdir = "../data/tolerance_grid/eval_pisolver_2"
+    outdir = "data/tolerance_grid/eval_pisolver_2"
     os.makedirs(outdir, exist_ok=True)
 
     # hyper parameters
     batch_size = 64
-    tau_a_range = (0.01, 0.5)
+    tau_a_range = (0.05, 0.5)
     tau_r_range = (0.5, 10)
     resolution = 20
     ki = 0.3

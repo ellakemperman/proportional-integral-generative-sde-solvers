@@ -1,11 +1,17 @@
+import os
+import pathlib
 from typing import Callable
 import pickle
 
 import matplotlib.pyplot as plt
 import torch
+from torch.utils.data import IterableDataset
+from torchvision.io import decode_image
+
 from torchvision.models import inception_v3, Inception_V3_Weights
 
 import dnnlib
+
 
 
 def broadcast_vector(vector: torch.Tensor, tensor: torch.Tensor) -> torch.Tensor:
@@ -54,3 +60,27 @@ def plot_images(images: list[str], n_cols: int) -> plt.Figure:
 
     fig.tight_layout()
     return fig
+
+
+class ImageSampleDataset(IterableDataset):
+
+    def __init__(self, image_dir: str, n_images: int = 0, transform = None):
+        super().__init__()
+        self._image_dir = image_dir
+        self._n_images = n_images
+        self._transform = transform
+
+    def __len__(self):
+        return len(os.listdir(self._image_dir)) if not self._n_images else self._n_images
+
+    def __iter__(self):
+        for i, image_path in enumerate(pathlib.Path(self._image_dir).iterdir()):
+            if i >= self._n_images and self._n_images:
+                break
+
+            image = decode_image(image_path)
+            if self._transform:
+                image = self._transform(image)
+            yield image
+
+

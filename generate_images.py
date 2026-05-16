@@ -129,19 +129,23 @@ def generate_images(
 def get_pi_solver_func(
         max_iter: int
 ) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
-    return lambda sde, _: PISolver(
-        sde,
-        ki=0.3,
-        kp=0.1,
-        tau_a=0.147,
-        tau_r=9,
-        alpha=0.9,
-        h_start=27,
-        max_decrease=0.05,
-        max_increase=1.1,
-        max_iter=max_iter,
-        interval=(80, 0),
-    )
+    print("Solver: PI")
+    return lambda sde, _: PISolver2.create_heun_end_pi_solver(
+            sde,
+            ode_threshold=0.2,
+            n_ode_steps=3,
+            ki=0.3,
+            kp=0.1,
+            tau_a=0.1,
+            tau_r=10,
+            alpha=0.9,
+            h_start=30,
+            max_decrease=0.05,
+            max_increase=5,
+            max_iter=max_iter,
+            interval=(80, 0.002),
+            abs_error=False
+        ).to("cuda")
 
 
 def get_em_solver_func(
@@ -150,6 +154,7 @@ def get_em_solver_func(
         t_max: float = 80,
         rho: float = 7
 ) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
+    print("Solver: Euler-Marayuma")
     return lambda sde, _: EulerMarayumaSolver(
         sde,
         get_edm_schedule(nfe, t_min, t_max, rho)
@@ -162,6 +167,7 @@ def get_heun_solver_func(
         t_max: float = 80,
         rho: float = 7
 ) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
+    print("Solver: Heun")
     return lambda sde, _: HeunSolver(
         sde,
         get_edm_schedule(nfe // 2, t_min, t_max, rho)
@@ -174,28 +180,33 @@ def get_edm_solver_func(
         t_max: float = 80,
         rho: float = 7
 ) -> Callable[[SDE, Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]], Solver]:
+    print("Solver: EDM")
     return lambda sde, model: EDMSolver(
         get_edm_schedule(nfe // 2, t_min, t_max, rho),
-        model
+        model,
+        S_churn=40,
+        S_min=0.05,
+        S_max=50,
+        S_noise=1.003
     )
 
 
 if __name__ == "__main__":
     t_min, t_max = 0.002, 80
-    n_steps = 100
+    n_steps = 50
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     batch_size = 48
-    n_samples = 4576
-    seed = 5424
+    n_samples = 50000
+    seed = 0
     max_iter = 150
 
-    image_out_path = "data/image_testing/edm/100NFE/images/"
-    data_out_path = "data/image_testing/edm/100NFE/data/"
+    image_out_path = "data/image_testing/pi_2/50NFE_1/images/"
+    data_out_path = "data/image_testing/pi_2/50NFE_1/data/"
 
-    # logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
-    constructor = get_edm_solver_func(n_steps)
+    logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
+    constructor = get_pi_solver_func(max_iter)
 
     nfe = generate_images(
         solver_func=constructor,
@@ -205,7 +216,8 @@ if __name__ == "__main__":
         device=device,
         seed=seed,
         ode_threshold=0.5,
-        ode=False
+        ode=False,
+        callback=logger,
     )
     print(nfe)
 
