@@ -32,21 +32,6 @@ def load_edm_checkpoint(url: str) -> tuple[Callable[[torch.Tensor, torch.Tensor,
     return model, encoder
 
 
-def calculate_fid(X: torch.Tensor, X_hat: torch.Tensor) -> float:
-    print("Calculating X mu and Sigma...")
-    mu, sigma         = X.mean(dim=0), X.T.cov()
-
-    print(mu.shape, sigma.shape)
-
-    print("Calculating X_hat mu and Sigma...")
-    mu_hat, sigma_hat = X_hat.mean(dim=0), X_hat.T.cov()
-
-    print("Calculating FID...")
-    mu_diff = torch.sum((mu - mu_hat)**2)
-    covs = sigma + sigma_hat - 2 * ((sigma * sigma_hat)**0.5).real
-    return float(mu_diff + torch.trace(covs))
-
-
 def get_feature_vectors(X: torch.Tensor) -> float:
     return inception_v3(weights=Inception_V3_Weights.IMAGENET1K_V1, progress=True)(X)
 

@@ -1,10 +1,10 @@
 import torch
 
 
-def monge_inception_distance_torch(
+def monge_inception_distance(
         x_hat: torch.Tensor,
         x: torch.Tensor,
-        seed: int,
+        seed: int = 0,
         n_projections: int = 100
 ):
     """
@@ -36,7 +36,7 @@ def monge_inception_distance_torch(
     u_proj /= torch.linalg.norm(u_proj, dim=-1, keepdim=True)
 
     x_proj = u_proj @ x.T
-    x_hat_proj = x_hat @ x_hat.T
+    x_hat_proj = u_proj @ x_hat.T
 
     dists = torch.mean(
         (
@@ -46,4 +46,19 @@ def monge_inception_distance_torch(
         dim=-1
     )
 
-    return alpha * torch.mean(dists)
+    return float(alpha * torch.mean(dists))
+
+
+def frechet_inception_distance(x_hat: torch.Tensor, x: torch.Tensor) -> float:
+    print("Calculating X mu and Sigma...")
+    mu, sigma         = x.mean(dim=0), x.T.cov()
+
+    print(mu.shape, sigma.shape)
+
+    print("Calculating X_hat mu and Sigma...")
+    mu_hat, sigma_hat = x_hat.mean(dim=0), x_hat.T.cov()
+
+    print("Calculating FID...")
+    mu_diff = torch.sum((mu - mu_hat)**2)
+    covs = sigma + sigma_hat - 2 * ((sigma * sigma_hat)**0.5).real
+    return float(mu_diff + torch.trace(covs))

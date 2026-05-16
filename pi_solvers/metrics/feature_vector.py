@@ -5,6 +5,7 @@ import torch
 import tqdm
 
 from pi_solvers import dnnlib, utils
+from pi_solvers.metrics import metrics
 
 
 class FeatureDetector(ABC):
@@ -69,15 +70,14 @@ def detect_image_features(
 
 # Test code
 if __name__ == "__main__":
-    x_hat = detect_image_features(
+    """    x_hat = detect_image_features(
         image_dir="../../data/image_testing/edm/50NFE_churn/images",
         batch_size=256,
         detector=InceptionV3Detector(),
         device="cuda",
-        save_path="../../data/image_testing/pi/edm/50NFE_churn/features.pkl",
+        save_path="../../data/image_testing/edm/50NFE_churn/data/features.pkl",
         n_images=50000
-    )
-    # x_hat = torch.load("../../data/image_testing/pi/50NFE/data/features.pkl")
+    )"""
+    x_hat = torch.load("../../data/image_testing/pi/50NFE/data/features.pkl")
     x = torch.load("../../refs/img64/features.pkl")
-
-    print(utils.calculate_fid(x, x_hat))
+    print(metrics.monge_inception_distance(x[:5000], x_hat[:5000]))
