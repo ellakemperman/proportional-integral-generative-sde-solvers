@@ -1,11 +1,12 @@
+import os
 from abc import abstractmethod, ABC
 import pickle
 
+import numpy as np
 import torch
 import tqdm
 
 from pi_solvers import dnnlib, utils
-from pi_solvers.metrics import metrics
 
 
 class FeatureDetector(ABC):
@@ -51,35 +52,26 @@ def detect_image_features(
         n_images: int = 0,
         save_path: str = None
 ):
-    images = utils.ImageSampleDataset(image_dir, n_images)
-    dataloader = torch.utils.data.DataLoader(images, batch_size=batch_size, num_workers=4, pin_memory=True)
+    images = utils.ImageSampleDataset(image_dir, n_images=n_images)
+    dataloader = torch.utils.data.DataLoader(images, batch_size=batch_size, pin_memory=True, num_workers=4)
 
-    features = []
+    features = np.zeros((len(images), detector.n_features), dtype=np.float32)
     detector.to(device)
+    bar = tqdm.tqdm(total=len(images), unit="img")
 
-    print("Calculating feature vectors...")
-    for i, image_batch in tqdm.tqdm(enumerate(dataloader), total=len(images) // batch_size + 1):
+    for i, image_batch in enumerate(dataloader):
         with torch.no_grad():
             feature_vectors = detector(image_batch.to(device)).to(torch.float64).to("cpu")
-            features.append(feature_vectors)
 
-    features = torch.cat(features)[:len(images)]
+        features[i * batch_size : i * batch_size + image_batch.shape[0]] = feature_vectors.numpy()
+        bar.update(image_batch.shape[0])
+
+    bar.close()
+
+    features = torch.from_numpy(features)
 
     if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         torch.save(features, save_path)
 
     return features
-
-
-# Test code
-if __name__ == "__main__":
-    x_hat = detect_image_features(
-        image_dir="../../refs/img64/train_64x64/train_64x64",
-        batch_size=256,
-        detector=InceptionV3Detector(),
-        device="cuda",
-        save_path="../../refs/img64/features.pkl",
-    )
-    x_hat = torch.load("../../data/image_testing/edm/50NFE_churn/data/features.pkl")
-    x = torch.load("../../refs/img64/features.pkl")
-    print(metrics.frechet_inception_distance(x, x_hat))

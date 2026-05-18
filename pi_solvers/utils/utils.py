@@ -5,12 +5,12 @@ import pickle
 
 import matplotlib.pyplot as plt
 import torch
-from torch.utils.data import IterableDataset
 from torchvision.io import decode_image
 
 from torchvision.models import inception_v3, Inception_V3_Weights
 
 from pi_solvers import dnnlib
+from pi_solvers.torch_utils.dataset import Dataset
 
 
 def broadcast_vector(vector: torch.Tensor, tensor: torch.Tensor) -> torch.Tensor:
@@ -53,23 +53,21 @@ def plot_images(images: list[str], n_cols: int) -> plt.Figure:
     return fig
 
 
-class ImageSampleDataset(IterableDataset):
+class ImageSampleDataset(Dataset):
 
     def __init__(self, image_dir: str, n_images: int = 0, transform = None):
-        super().__init__()
-        self._image_dir = image_dir
+        self._images = list(pathlib.Path(image_dir).iterdir())
+        if n_images:
+            self._images = self._images[:n_images]
+
         self._n_images = n_images
         self._transform = transform
 
     def __len__(self):
-        return len(os.listdir(self._image_dir)) if not self._n_images else self._n_images
+        return len(self._images)
 
-    def __iter__(self):
-        for i, image_path in enumerate(pathlib.Path(self._image_dir).iterdir()):
-            if i >= self._n_images and self._n_images:
-                break
-
-            image = decode_image(image_path)
-            if self._transform:
-                image = self._transform(image)
-            yield image
+    def __getitem__(self, item):
+        image = decode_image(self._images[item])
+        if self._transform:
+            image = self._transform(image)
+        return image

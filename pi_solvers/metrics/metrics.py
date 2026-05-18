@@ -4,8 +4,8 @@ import numpy as np
 
 
 def monge_inception_distance(
-        x_hat: torch.Tensor,
         x: torch.Tensor,
+        x_hat: torch.Tensor,
         seed: int = 0,
         n_projections: int = 100
 ):
@@ -13,20 +13,20 @@ def monge_inception_distance(
     Computes the MIND metric from the paper MIND: Monge Inception Distance for Generative Models
     Evaluation: https://arxiv.org/html/2605.06797v1#A3.F10.sf2
 
-    :param x_hat: The generated features
     :param x: Ground truth
+    :param x_hat: The generated features
     :param seed: Random seed
     :param n_projections: Number of projections to use
     :return: The value of the MIND metric
     """
+    generator = torch.Generator(device=x.device).manual_seed(seed)
 
     n_samples, d = x_hat.shape
     assert n_samples <= x.shape[0], "Ground truth needs to have at least as many samples as predicted"
 
-    x = x[:n_samples]
+    x = x[torch.randint(x.shape[0], size=(n_samples,), generator=generator)]
 
     alpha = 3 * d
-    generator = torch.Generator(device=x.device).manual_seed(seed)
 
     u_proj = torch.randn(
         (n_projections, d),
@@ -51,16 +51,13 @@ def monge_inception_distance(
     return float(alpha * torch.mean(dists))
 
 
-def frechet_inception_distance(x_hat: torch.Tensor, x: torch.Tensor, dtype=torch.float64) -> float:
-    print("Calculating X mu and Sigma...")
+def frechet_inception_distance(x: torch.Tensor, x_hat: torch.Tensor, dtype=torch.float64) -> float:
     x, x_hat = x.to(dtype), x_hat.to(dtype)
 
     mu, sigma         = x.mean(dim=0).cpu().numpy(), x.T.cov().cpu().numpy()
 
-    print("Calculating X_hat mu and Sigma...")
     mu_hat, sigma_hat = x_hat.mean(dim=0).cpu().numpy(), x_hat.T.cov().cpu().numpy()
 
-    print("Calculating FID...")
     mu_diff = np.sum((mu - mu_hat)**2)
     s, _ = sqrtm(sigma @ sigma_hat, disp=False)
     covs = sigma + sigma_hat - 2 * s
