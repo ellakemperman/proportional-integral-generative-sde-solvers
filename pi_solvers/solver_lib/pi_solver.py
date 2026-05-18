@@ -28,6 +28,7 @@ class PISolver(Solver):
                  interval: tuple[float, float] = (1, 0),
                  max_iter: int = 10000,
                  abs_error: bool = False,
+                 batch_norm: bool = False
                  ):
         r"""
         Constructs the PISolver.
@@ -57,6 +58,7 @@ class PISolver(Solver):
         self._max_decrease = torch.Tensor([max_decrease])
         self._max_iter = max_iter
         self._abs_error = abs_error
+        self._batch_norm = batch_norm
 
     def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
@@ -92,6 +94,10 @@ class PISolver(Solver):
             # Compute extrapolated error
             old_error = error.clone()
             new_error = self._error(x_first, x_second, t)
+
+            if self._batch_norm:
+                new_error = torch.mean(new_error) * torch.ones_like(new_error)
+
             error[not_finished] = new_error
 
             # Update x and t
