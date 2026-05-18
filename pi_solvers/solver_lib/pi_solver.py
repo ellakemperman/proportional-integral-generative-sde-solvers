@@ -28,7 +28,8 @@ class PISolver(Solver):
                  interval: tuple[float, float] = (1, 0),
                  max_iter: int = 10000,
                  abs_error: bool = False,
-                 batch_norm: bool = False
+                 batch_norm: bool = False,
+                 **kwargs
                  ):
         r"""
         Constructs the PISolver.
@@ -45,7 +46,6 @@ class PISolver(Solver):
         :param interval: The interval over which the SDE is computed
         """
         super().__init__(sde)
-
         self._ki = ki
         self._kp = kp
         self._tau_a = tau_a
@@ -121,7 +121,7 @@ class PISolver(Solver):
                 callback(x_full, t_full, h_full, error)
             i += 1
 
-        print(reject_count / (reject_count + not_reject_count))
+        # print(reject_count / (reject_count + not_reject_count))
         return x_full
 
     def _error(self, x_first: torch.Tensor, x_second: torch.Tensor, t: torch.Tensor) -> torch.Tensor:

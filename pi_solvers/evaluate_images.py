@@ -4,7 +4,7 @@ import os.path
 
 import torch
 
-from pi_solvers.metrics import feature_vector, metrics
+from pi_solvers.evaluation import feature_vector, metrics
 
 
 class Metric(enum.Enum):
@@ -34,7 +34,6 @@ def gen_features(
     feature_vector.detect_image_features(
         image_dir,
         batch_size,
-        detector=feature_vector.InceptionV3Detector(),
         device=device,
         n_images=n_images,
         save_path=output
@@ -59,7 +58,6 @@ def eval_features(
         x_hat = feature_vector.detect_image_features(
             sample_dir,
             batch_size,
-            detector=feature_vector.InceptionV3Detector(),
             device=device,
             n_images=n_images,
             save_path=sample_output

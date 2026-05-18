@@ -13,7 +13,7 @@ class EulerMarayumaSolver(Solver):
     The Euler Marayuma solver uses a simple first order scheme and pre-determined time-discretisation to solve the SDE.
     """
 
-    def __init__(self, sde: SDE, discretisation: torch.Tensor):
+    def __init__(self, sde: SDE, discretisation: torch.Tensor, **kwargs):
         r"""
         Constructs the EulerMarayuma Solver
 
@@ -95,7 +95,8 @@ class EDMSolver(Solver):
             S_min: float = 0,
             S_max: float = float('inf'),
             S_noise: float = 1,
-            dtype: torch.dtype = torch.float32
+            dtype: torch.dtype = torch.float32,
+            **kwargs
     ):
         r"""
         Construct the EDM solver.
@@ -111,7 +112,6 @@ class EDMSolver(Solver):
         :param dtype: Dtype of all tensors.
         """
         super().__init__(EDMSDE())
-        
         self._discretisation = discretisation
         self._model = model
         self._g_model = g_model
