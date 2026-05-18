@@ -1,4 +1,6 @@
 import torch
+from scipy.linalg import sqrtm
+import numpy as np
 
 
 def monge_inception_distance(
@@ -49,16 +51,17 @@ def monge_inception_distance(
     return float(alpha * torch.mean(dists))
 
 
-def frechet_inception_distance(x_hat: torch.Tensor, x: torch.Tensor) -> float:
+def frechet_inception_distance(x_hat: torch.Tensor, x: torch.Tensor, dtype=torch.float64) -> float:
     print("Calculating X mu and Sigma...")
-    mu, sigma         = x.mean(dim=0), x.T.cov()
+    x, x_hat = x.to(dtype), x_hat.to(dtype)
 
-    print(mu.shape, sigma.shape)
+    mu, sigma         = x.mean(dim=0).cpu().numpy(), x.T.cov().cpu().numpy()
 
     print("Calculating X_hat mu and Sigma...")
-    mu_hat, sigma_hat = x_hat.mean(dim=0), x_hat.T.cov()
+    mu_hat, sigma_hat = x_hat.mean(dim=0).cpu().numpy(), x_hat.T.cov().cpu().numpy()
 
     print("Calculating FID...")
-    mu_diff = torch.sum((mu - mu_hat)**2)
-    covs = sigma + sigma_hat - 2 * ((sigma * sigma_hat)**0.5).real
-    return float(mu_diff + torch.trace(covs))
+    mu_diff = np.sum((mu - mu_hat)**2)
+    s, _ = sqrtm(sigma @ sigma_hat, disp=False)
+    covs = sigma + sigma_hat - 2 * s
+    return float(np.real(mu_diff + np.trace(covs)))

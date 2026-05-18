@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pi_solvers"
+version = "0.1.0"
+
+[tool.setuptools]
+py-modules = ["pi_solvers"]
+
+[project.scripts]
+evaluate-images = "pi_solvers.evaluate_images:main"
+create-image-sample = "pi_solvers.create_image_sample:main"
+calculate-metrics = "pi_solvers.calculate_metrics:cmdline"

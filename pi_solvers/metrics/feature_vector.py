@@ -52,15 +52,18 @@ def detect_image_features(
         save_path: str = None
 ):
     images = utils.ImageSampleDataset(image_dir, n_images)
-    dataloader = torch.utils.data.DataLoader(images, batch_size=batch_size)
+    dataloader = torch.utils.data.DataLoader(images, batch_size=batch_size, num_workers=4, pin_memory=True)
 
-    features = torch.zeros((len(images), detector.n_features))
+    features = []
     detector.to(device)
 
     print("Calculating feature vectors...")
     for i, image_batch in tqdm.tqdm(enumerate(dataloader), total=len(images) // batch_size + 1):
-        first_image_i = i * batch_size
-        features[first_image_i: first_image_i + image_batch.shape[0]] = detector(image_batch.to(device))
+        with torch.no_grad():
+            feature_vectors = detector(image_batch.to(device)).to(torch.float64).to("cpu")
+            features.append(feature_vectors)
+
+    features = torch.cat(features)[:len(images)]
 
     if save_path:
         torch.save(features, save_path)
@@ -70,14 +73,13 @@ def detect_image_features(
 
 # Test code
 if __name__ == "__main__":
-    """    x_hat = detect_image_features(
-        image_dir="../../data/image_testing/edm/50NFE_churn/images",
+    x_hat = detect_image_features(
+        image_dir="../../refs/img64/train_64x64/train_64x64",
         batch_size=256,
         detector=InceptionV3Detector(),
         device="cuda",
-        save_path="../../data/image_testing/edm/50NFE_churn/data/features.pkl",
-        n_images=50000
-    )"""
-    x_hat = torch.load("../../data/image_testing/pi/50NFE/data/features.pkl")
+        save_path="../../refs/img64/features.pkl",
+    )
+    x_hat = torch.load("../../data/image_testing/edm/50NFE_churn/data/features.pkl")
     x = torch.load("../../refs/img64/features.pkl")
-    print(metrics.monge_inception_distance(x[:5000], x_hat[:5000]))
+    print(metrics.frechet_inception_distance(x, x_hat))

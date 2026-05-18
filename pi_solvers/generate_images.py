@@ -4,9 +4,9 @@ import PIL.Image
 import pandas as pd
 import tqdm
 
-import utils
-from sde_lib import EDMSDE, SDE
-from solver_lib import *
+from pi_solvers import utils
+from pi_solvers.sde_lib import EDMSDE, SDE
+from pi_solvers.solver_lib import *
 
 
 class PIDataLogger:
@@ -80,7 +80,7 @@ def generate_images(
         batch_size: int = 64,
         ode_threshold: float = 0.2,
         ode: bool = True,
-        model_url: str = "model/edm2-img64-xl-0671088-0.040.pkl",
+        model_url: str = "../model/edm2-img64-xl-0671088-0.040.pkl",
         device: torch.device | str = "cuda",
         callback: PIDataLogger | None = None
 ):
@@ -198,15 +198,15 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     batch_size = 48
-    n_samples = 50000
-    seed = 0
+    n_samples = 40000
+    seed = 10000
     max_iter = 150
 
-    image_out_path = "data/image_testing/pi_2/50NFE_1/images/"
-    data_out_path = "data/image_testing/pi_2/50NFE_1/data/"
+    image_out_path = "../data/image_testing/em/50NFE/images/"
+    data_out_path = "../data/image_testing/em/50NFE/data/"
 
     logger = PIDataLogger(data_out_path, batch_size=batch_size, max_iter=max_iter)
-    constructor = get_pi_solver_func(max_iter)
+    constructor = get_em_solver_func(n_steps)
 
     nfe = generate_images(
         solver_func=constructor,
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         seed=seed,
         ode_threshold=0.5,
         ode=False,
-        callback=logger,
+        callback=None,
     )
     print(nfe)
 

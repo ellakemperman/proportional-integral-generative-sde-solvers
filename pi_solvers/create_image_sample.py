@@ -19,7 +19,7 @@ def create_image_sample(image_path: str, save_path: str, n: int = 16, n_cols: in
     print(f"Image saved to {os.path.abspath(save_path + "/samples.png")}")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Creates an image in n_cols x n // n_cols")
     parser.add_argument("filepath", type=str)
     parser.add_argument("-o", "--output", default=".", type=str)
@@ -29,3 +29,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     create_image_sample(args.filepath, args.output, args.n_images, args.n_cols)
 
+
+if __name__ == "__main__":
+    main()

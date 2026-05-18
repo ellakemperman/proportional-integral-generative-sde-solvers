@@ -13,7 +13,6 @@ from torchvision.models import inception_v3, Inception_V3_Weights
 from pi_solvers import dnnlib
 
 
-
 def broadcast_vector(vector: torch.Tensor, tensor: torch.Tensor) -> torch.Tensor:
     return vector.view(tensor.shape[0], *([1] * (tensor.dim() - 1)))
 
@@ -74,5 +73,3 @@ class ImageSampleDataset(IterableDataset):
             if self._transform:
                 image = self._transform(image)
             yield image
-
-
