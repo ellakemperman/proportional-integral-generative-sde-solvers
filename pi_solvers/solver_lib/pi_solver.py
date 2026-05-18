@@ -118,7 +118,7 @@ class PISolver(Solver):
             x_full[not_finished], t_full[not_finished], h_full[not_finished] = x, t, h
 
             if callback is not None:
-                callback(x_full, t_full, h_full, error)
+                callback(x=x_full, t=t_full, h=h_full, error=error)
             i += 1
 
         # print(reject_count / (reject_count + not_reject_count))

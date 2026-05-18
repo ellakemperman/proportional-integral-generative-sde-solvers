@@ -1,4 +1,6 @@
 """Computes metrics of the data"""
+import enum
+
 import torch
 from scipy.linalg import sqrtm
 import numpy as np
@@ -83,3 +85,21 @@ def frechet_inception_distance(
 
 def calc_mean_covariance(x: torch.Tensor) -> tuple[np.ndarray, np.ndarray]:
     return x.mean(dim=0).cpu().numpy(), x.T.cov().cpu().numpy()
+
+
+class Metric(enum.Enum):
+    FID = "FID"
+    MIND = "MIND"
+
+    def __str__(self):
+        return self.value
+
+    def get_func(self):
+        match self.value:
+            case "FID": return frechet_inception_distance
+            case "MIND": return monge_inception_distance
+
+    def uses_stats(self):
+        if self == Metric.FID:
+            return True
+        return False

@@ -4,7 +4,6 @@ import os.path
 import torch
 
 from pi_solvers.evaluation import feature_vector, metrics
-from pi_solvers.utils import Metric
 
 
 def gen_features(
@@ -39,7 +38,7 @@ def gen_features(
 def eval_features(
         sample_dir: str,
         ref_dir: str,
-        metric: list[Metric],
+        metric: list[metrics.Metric],
         sample_output: str = None,
         ref_output: str = None,
         ref_statistics: str = None,
@@ -120,7 +119,7 @@ def main():
                                       help="Directory with the samples (then features are generated) or a saved torch.Tensor whose feature vectors can be used.")
     eval_features_parser.add_argument("ref_dir", type=str,
                                       help="Directory with the reference (then features are generated) or a saved torch.Tensor whose reference feature vectors can be used.")
-    eval_features_parser.add_argument("-m", "--metric", action="append", default=[], type=Metric, choices=list(Metric),
+    eval_features_parser.add_argument("-m", "--metric", action="append", default=[], type=metrics.Metric, choices=list(metrics.Metric),
                                       help="Metrics to be computed. Options are FID and MIND.")
     eval_features_parser.add_argument("-s", "--sample_output", default=None, type=str,
                                       help="Optional directory where sample features can be saved if these are computed.")

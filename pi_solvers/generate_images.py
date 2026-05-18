@@ -5,6 +5,7 @@ import os
 from pi_solvers.solver_lib import *
 from pi_solvers.evaluation.generate_samples import generate_images
 from pi_solvers.utils.data_logger import PIDataLogger
+from pi_solvers.utils import write_general_info
 
 
 def setup_dirs(name: str, path: str = None, exist_okay: bool = False) -> tuple[str, str]:
@@ -17,12 +18,6 @@ def setup_dirs(name: str, path: str = None, exist_okay: bool = False) -> tuple[s
     os.makedirs(write_path, exist_ok=exist_okay)
 
     return image_path, write_path
-
-
-def write_general_info(path: str, **kwargs):
-    with open(path, "w") as f:
-        for key, value in kwargs.items():
-            f.write(f"{key}: {value}")
 
 
 def generate_pi_images(

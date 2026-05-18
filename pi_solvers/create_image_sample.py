@@ -2,7 +2,7 @@ import argparse
 import os
 import pathlib
 
-from utils import plot_images
+from pi_solvers.utils import plot_images
 
 
 def create_image_sample(image_path: str, save_path: str, n: int = 16, n_cols: int = 4):

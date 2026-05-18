@@ -13,3 +13,4 @@ py-modules = ["pi_solvers"]
 evaluate-images = "pi_solvers.evaluate_images:main"
 create-image-sample = "pi_solvers.create_image_sample:main"
 generate-images = "pi_solvers.generate_images:main"
+tolerance-grid-search = "pi_solvers.tolerance_grid_search:main"

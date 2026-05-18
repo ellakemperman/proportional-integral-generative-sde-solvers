@@ -55,3 +55,22 @@ class PIDataLogger(DataLogger):
         self._ts = torch.zeros_like(self._ts)
         self._hs = torch.zeros_like(self._hs)
         self._errors = torch.zeros_like(self._errors)
+
+
+class RejectCounter(DataLogger):
+    def __init__(self):
+        self.__reject_count = 0
+        self.__total = 0
+
+    def __call__(self, error: torch.Tensor, *args, **kwargs):
+        return self.callback(error)
+
+    def callback(self, error: torch.Tensor):
+        self.__total += error.shape[0]
+        self.__reject_count += int(torch.sum(error > 1))
+
+    def reject_rate(self):
+        return self.__reject_count / self.__total
+
+    def write(self):
+        pass
