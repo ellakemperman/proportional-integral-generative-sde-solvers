@@ -52,7 +52,11 @@ def monge_inception_distance(
     return float(alpha * torch.mean(dists))
 
 
-def frechet_inception_distance(x: torch.Tensor, x_hat: torch.Tensor, dtype=torch.float64) -> float:
+def frechet_inception_distance(
+        x: torch.Tensor | dict,
+        x_hat: torch.Tensor,
+        dtype=torch.float64
+) -> float:
     """
     Computes the frechet inception distance.
 
@@ -61,13 +65,21 @@ def frechet_inception_distance(x: torch.Tensor, x_hat: torch.Tensor, dtype=torch
     :param dtype: Torch dtype
     :return: The value of the Frechet Inception Distance
     """
-    x, x_hat = x.to(dtype), x_hat.to(dtype)
+    x_hat = x_hat.to(dtype)
 
-    mu, sigma         = x.mean(dim=0).cpu().numpy(), x.T.cov().cpu().numpy()
+    if isinstance(x, dict):
+        mu, sigma = x["mu"], x["sigma"]
+    else:
+        x = x.to(dtype)
+        mu, sigma = calc_mean_covariance(x)
 
-    mu_hat, sigma_hat = x_hat.mean(dim=0).cpu().numpy(), x_hat.T.cov().cpu().numpy()
+    mu_hat, sigma_hat = calc_mean_covariance(x_hat)
 
     mu_diff = np.sum((mu - mu_hat)**2)
     s, _ = sqrtm(sigma @ sigma_hat, disp=False)
     covs = sigma + sigma_hat - 2 * s
     return float(np.real(mu_diff + np.trace(covs)))
+
+
+def calc_mean_covariance(x: torch.Tensor) -> tuple[np.ndarray, np.ndarray]:
+    return x.mean(dim=0).cpu().numpy(), x.T.cov().cpu().numpy()

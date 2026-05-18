@@ -155,47 +155,83 @@ def generate_edm_images(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generates images using diffusion")
-    parser.add_argument("-b", "--batch_size", default=64, type=int)
-    parser.add_argument("-d", "--device", default="cuda", type=torch.device)
-    parser.add_argument("-n", "--n_images", default=0, type=int)
-    parser.add_argument("--ode", action='store_true')
-    parser.add_argument("-m", "--model", default="model/edm2-img64-xl-0671088-0.040.pkl", type=str)
-    parser.add_argument("-s", "--seed", default=0, type=int)
-    parser.add_argument("-o", "--output", default=None, type=str)
-    parser.add_argument("-e", "--exist_okay", action='store_true')
+    # Main argument parsing
+    parser = argparse.ArgumentParser(description="Generates images using diffusion using EDM2 models, from sigma=80 to sigma=0",)
+    parser.add_argument("-b", "--batch_size", default=64, type=int,
+                        help="Batch size for image generation (default 64)")
+    parser.add_argument("-d", "--device", default="cuda", type=torch.device,
+                        help="Device used for image generation (default cuda)")
+    parser.add_argument("-n", "--n_images", default=50000, type=int,
+                        help="Number of images to be generated (default 50000)")
+    parser.add_argument("--ode", action='store_true',
+                        help="Evaluate on ODE instead of SDE")
+    parser.add_argument("-m", "--model", default="model/edm2-img64-xl-0671088-0.040.pkl", type=str,
+                        help="Model url. Either a locally downloaded checkpoint loadable with dnnlib or an nvidia model url")
+    parser.add_argument("-s", "--seed", default=0, type=int,
+                        help="Random seed (default 0)")
+    parser.add_argument("-o", "--output", default=None, type=str,
+                        help="Output directory. If not stated, creates a default directory: data/image_testing/solver_name/")
+    parser.add_argument("-e", "--exist_okay", action='store_true',
+                        help="Overwrite existing directory if it exists.")
 
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(title="Solvers")
 
-    em_parser = subparsers.add_parser("euler-marayuma", aliases=["em"])
-    em_parser.add_argument("--nfe", default=50, type=int)
-    em_parser.add_argument("--rho", default=7, type=float)
+    # euler-marayuma parser
+    em_parser = subparsers.add_parser("euler-marayuma", aliases=["em"],
+                                      help="Evaluate images using an Euler-Marayuma solver")
+    em_parser.add_argument("--nfe", default=200, type=int,
+                           help="Number of function evaluations to use (default 200).")
+    em_parser.add_argument("--rho", default=7, type=float,
+                           help="Which rho to use for the EDM schedule (default 7)")
     em_parser.set_defaults(func=generate_em_images)
 
-    edm_parser = subparsers.add_parser("edm")
-    edm_parser.add_argument("--nfe", default=50, type=int)
-    edm_parser.add_argument("--rho", default=7, type=float)
-    edm_parser.add_argument("--S_churn", default=0, type=float)
-    edm_parser.add_argument("--S_min", default=0, type=float)
-    edm_parser.add_argument("--S_max", default=float("inf"), type=float)
-    edm_parser.add_argument("--S_noise", default=1, type=float)
+    # EDM parser
+    edm_parser = subparsers.add_parser("edm",
+                                       help="Evaluate images using the EDM solver: https://arxiv.org/pdf/2206.00364")
+    edm_parser.add_argument("--nfe", default=64, type=int,
+                           help="Number of function evaluations to use (default 64).")
+    edm_parser.add_argument("--rho", default=7, type=float,
+                           help="Which rho to use for the EDM schedule (default 7)")
+    edm_parser.add_argument("--S_churn", default=0, type=float,
+                            help="Overall amount of stochasticity. If 0, this becomes a probability flow ODE (default 0).")
+    edm_parser.add_argument("--S_min", default=0, type=float,
+                            help="Minimum time at which stochasticity is added (default 0).")
+    edm_parser.add_argument("--S_max", default=float("inf"), type=float,
+                            help="Maximum time at which stochasticity is added (default inf).")
+    edm_parser.add_argument("--S_noise", default=1, type=float,
+                            help="Inflates standard deviation of added noise (default 1).")
     edm_parser.set_defaults(func=generate_edm_images)
 
-    pi_parser = subparsers.add_parser("proportional-integral", aliases=["pi"])
-    pi_parser.add_argument("--max_iter", default=1000, type=int)
-    pi_parser.add_argument("--ode_threshold", default=0.2, type=float)
-    pi_parser.add_argument("--n_ode_steps", default=3, type=int)
-    pi_parser.add_argument("--ki", default=0.3, type=float)
-    pi_parser.add_argument("--kp", default=0.1, type=float)
-    pi_parser.add_argument("--tau_a", default=0.1, type=float)
-    pi_parser.add_argument("--tau_r", default=10, type=float)
-    pi_parser.add_argument("--alpha", default=0.9, type=float)
-    pi_parser.add_argument("--h_start", default=30, type=float)
-    pi_parser.add_argument("--max_decrease", default=0.05, type=float)
-    pi_parser.add_argument("--max_increase", default=5, type=float)
-    pi_parser.add_argument("--batch_norm", action='store_true')
-    pi_parser.add_argument("--abs_error", action='store_true')
-    parser.set_defaults(func=generate_pi_images)
+    # proportional-integral parser
+    pi_parser = subparsers.add_parser("proportional-integral", aliases=["pi"],
+                                      help="Evaluate images using our solver.")
+    pi_parser.add_argument("--max_iter", default=1000, type=int,
+                           help="Maximum number of iterations before terminating (default 1000).")
+    pi_parser.add_argument("--ode_threshold", default=0.2, type=float,
+                           help="Time (noise) threshold from which the solver switches to discretised Heun on ODE (default 0.2).")
+    pi_parser.add_argument("--n_ode_steps", default=3, type=int,
+                           help="Number of ODE steps the solver takes after switching to Heun ODE (default 3).")
+    pi_parser.add_argument("--ki", default=0.3, type=float,
+                           help="Integral constant for step-size control (default 0.3).")
+    pi_parser.add_argument("--kp", default=0.1, type=float,
+                           help="Proportional constant for step-size control (default 0.1).")
+    pi_parser.add_argument("--tau_a", default=0.1, type=float,
+                           help="Absolute tolerance (default 0.1).")
+    pi_parser.add_argument("--tau_r", default=10, type=float,
+                           help="Relative tolerance. Increasing directly decreases NFE (default 10).")
+    pi_parser.add_argument("--alpha", default=0.9, type=float,
+                           help="Safety factor (default 0.9)")
+    pi_parser.add_argument("--h_start", default=30, type=float,
+                           help="Starting step size (default 30).")
+    pi_parser.add_argument("--max_decrease", default=0.05, type=float,
+                           help="Maximum decrease factor in one step of the step size (default 0.05).")
+    pi_parser.add_argument("--max_increase", default=5, type=float,
+                           help="Maximum increase factor in one step of the step size (default 5).")
+    pi_parser.add_argument("--batch_norm", action='store_true',
+                           help="Turn on batch normalisation, averaging the discretisation error over each batch, thus using the same step size for each image in the batch.")
+    pi_parser.add_argument("--abs_error", action='store_true',
+                           help="Turn on absolute error normalisation instead of noise error normalisation.")
+    pi_parser.set_defaults(func=generate_pi_images)
 
     args = parser.parse_args()
     args.func(**vars(args))

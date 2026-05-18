@@ -105,3 +105,8 @@ class Metric(enum.Enum):
         match self.value:
             case "FID": return metrics.frechet_inception_distance
             case "MIND": return metrics.monge_inception_distance
+
+    def uses_stats(self):
+        if self == Metric.FID:
+            return True
+        return False

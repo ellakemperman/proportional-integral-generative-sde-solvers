@@ -103,11 +103,11 @@ def plot_ratings(tau_a_range: tuple[float, float], tau_r_range: tuple[float, flo
     for i in range(av.shape[1]):
         for j in range(av.shape[0]):
             tau_a, tau_r = round(float(av[i, j]), 3), round(float(rv[i, j]), 3)
-            ratings[i, j] = df[np.logical_and(df["tau_a"] == tau_a, df["tau_r"] == tau_r)]["rating"].iloc[0]
+            ratings[i, j] = np.log(df[np.logical_and(df["tau_a"] == tau_a, df["tau_r"] == tau_r)]["rating"].iloc[0])
 
     plt.figure()
     mesh = plt.pcolormesh(av, rv, ratings, cmap='inferno')
-    plt.colorbar(mesh, label='Ratings')
+    plt.colorbar(mesh, label='Log MIND')
     plt.xlabel(r"$\tau_a$")
     plt.ylabel(r"$\tau_r$")
     plt.title(r"Ratings as a function of $\tau_a$ and $\tau_r$")
@@ -118,5 +118,6 @@ if __name__ == "__main__":
     rater = MetricRater(Metric.MIND, ref=torch.load("../refs/img64_features.pkl"))
 
     target = "../data/tolerance_grid/eval_pisolver_2"
-    df = evaluate_images(target, rater)
-    plot_ratings((0.1, 1), (0.5, 10), 20, df, target)
+    # df = evaluate_images(target, rater)
+    df = pd.read_csv(target + "/ratings.csv")
+    plot_ratings((0.05, 0.5), (0.5, 10), 20, df, target)

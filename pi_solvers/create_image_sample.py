@@ -20,11 +20,16 @@ def create_image_sample(image_path: str, save_path: str, n: int = 16, n_cols: in
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Creates an image in n_cols x n // n_cols")
-    parser.add_argument("filepath", type=str)
-    parser.add_argument("-o", "--output", default=".", type=str)
-    parser.add_argument("-n", "--n_images", default=16, type=int)
-    parser.add_argument("-c", "--n_cols", default=4, type=int)
+    parser = argparse.ArgumentParser(description="Creates an image in n_cols x n // n_cols. For "
+                                                 "good output, ensure n_images is divisible by n_cols")
+    parser.add_argument("filepath", type=str,
+                        help="Path where the images are stored.")
+    parser.add_argument("-o", "--output", default=".", type=str,
+                        help="Path where the sample should be written (default current directory).")
+    parser.add_argument("-n", "--n_images", default=16, type=int,
+                        help="Number of images to use in the sample image (default 16).")
+    parser.add_argument("-c", "--n_cols", default=4, type=int,
+                        help="Number of columns to use in the sample image grid (default 4).")
 
     args = parser.parse_args()
     create_image_sample(args.filepath, args.output, args.n_images, args.n_cols)
