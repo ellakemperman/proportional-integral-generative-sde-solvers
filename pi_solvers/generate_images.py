@@ -21,7 +21,8 @@ def setup_dirs(name: str, path: str = None, exist_okay: bool = False) -> tuple[s
 
 def write_general_info(path: str, **kwargs):
     with open(path, "w") as f:
-        f.write(str(kwargs))
+        for key, value in kwargs.items():
+            f.write(f"{key}: {value}")
 
 
 def generate_pi_images(

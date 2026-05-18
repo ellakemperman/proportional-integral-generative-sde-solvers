@@ -1,23 +1,10 @@
 import argparse
-import enum
 import os.path
 
 import torch
 
-from pi_solvers.evaluation import feature_vector, metrics
-
-
-class Metric(enum.Enum):
-    FID = "FID"
-    MIND = "MIND"
-
-    def __str__(self):
-        return self.value
-
-    def get_func(self):
-        match self.value:
-            case "FID": return metrics.frechet_inception_distance
-            case "MIND": return metrics.monge_inception_distance
+from pi_solvers.evaluation import feature_vector
+from pi_solvers.utils import Metric
 
 
 def gen_features(

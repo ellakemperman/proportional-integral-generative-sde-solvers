@@ -1,4 +1,4 @@
-import os
+import enum
 import pathlib
 from typing import Callable
 import pickle
@@ -11,6 +11,7 @@ from torchvision.models import inception_v3, Inception_V3_Weights
 
 from pi_solvers import dnnlib
 from pi_solvers.torch_utils.dataset import Dataset
+from pi_solvers.evaluation import metrics
 
 
 def broadcast_vector(vector: torch.Tensor, tensor: torch.Tensor) -> torch.Tensor:
@@ -91,3 +92,16 @@ class StackedRandomGenerator:
         assert size[0] == len(self.generators)
         return torch.stack([torch.randint(*args, size=size[1:], generator=gen, **kwargs) for gen in self.generators])
 ###
+
+
+class Metric(enum.Enum):
+    FID = "FID"
+    MIND = "MIND"
+
+    def __str__(self):
+        return self.value
+
+    def get_func(self):
+        match self.value:
+            case "FID": return metrics.frechet_inception_distance
+            case "MIND": return metrics.monge_inception_distance

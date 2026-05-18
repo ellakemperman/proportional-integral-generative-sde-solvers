@@ -51,7 +51,7 @@ def detect_image_features(
         device: str | torch.device = "cpu",
         n_images: int = 0,
         save_path: str = None,
-        detector: FeatureDetector = InceptionV3Detector()
+        detector: FeatureDetector = InceptionV3Detector(),
 ):
     """
     Detects the feature vectors of provided images.
@@ -64,11 +64,14 @@ def detect_image_features(
     :param save_path: Optional save path where feature vectors are stored.
     :return: The feature vectors of shape (n x 2048)
     """
+    print("Loading images from disk...")
+
     images = utils.ImageSampleDataset(image_dir, n_images=n_images)
     dataloader = torch.utils.data.DataLoader(images, batch_size=batch_size, pin_memory=True, num_workers=4)
 
     features = np.zeros((len(images), detector.n_features), dtype=np.float32)
     detector.to(device)
+
     bar = tqdm.tqdm(total=len(images), unit="img")
 
     for i, image_batch in enumerate(dataloader):
@@ -76,6 +79,7 @@ def detect_image_features(
             feature_vectors = detector(image_batch.to(device)).to(torch.float64).to("cpu")
 
         features[i * batch_size : i * batch_size + image_batch.shape[0]] = feature_vectors.numpy()
+
         bar.update(image_batch.shape[0])
 
     bar.close()

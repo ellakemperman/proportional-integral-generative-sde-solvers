@@ -1,14 +1,66 @@
 import pathlib
 import re
 import random
+from abc import ABC, abstractmethod
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import torch
+import tqdm
 
-from generate_tolerance_nfe_relation import create_grid
-from utils import plot_images
+from pi_solvers.generate_tolerance_nfe_relation import create_grid
+from pi_solvers.utils import plot_images, Metric
+from pi_solvers.evaluation import feature_vector
+
+
+class Rater(ABC):
+
+    @abstractmethod
+    def rate(self, eval_point, images: list[str]) -> float:
+        pass
+
+
+class ManualRater(Rater):
+
+    def __init__(self, n_cols: int):
+        self.n_cols = n_cols
+
+    def rate(self, eval_point, images: list[str]) -> float:
+        # Plot images
+        plot_images(images, self.n_cols).show()
+
+        # Get image rating
+        while True:
+            try:
+                rating = int(input("What is the quality of the following images (1-5):\n"))
+                assert 0 < rating <= 5
+                break
+            except (ValueError, AssertionError):
+                print("Please provide an integer from 1 to 5")
+
+        return float(rating)
+
+
+class MetricRater(Rater):
+
+    def __init__(
+            self,
+            metric: Metric,
+            ref: torch.Tensor,
+            batch_size: int = 64,
+            device: str | torch.device = "cuda"
+    ):
+        self._metric = metric
+        self._ref = ref
+        self._batch_size = batch_size
+        self._device = device
+
+    def rate(self, eval_point: str, images: list[str]) -> float:
+        features = feature_vector.detect_image_features(
+            image_dir=eval_point, batch_size=self._batch_size, device=self._device
+        )
+        return self._metric.get_func()(self._ref, features)
 
 
 def image_path_iterator(target_path: pathlib.Path) -> list[tuple[str, list[str]]]:
@@ -22,7 +74,7 @@ def image_path_iterator(target_path: pathlib.Path) -> list[tuple[str, list[str]]
     return subdirs
 
 
-def evaluate_images(target_path: str, n_cols: int = 4, seed = 42):
+def evaluate_images(target_path: str, rater: Rater, seed = 42):
     random.seed(seed)
 
     df = pd.DataFrame(columns=["tau_a", "tau_r", "rating"])
@@ -30,18 +82,8 @@ def evaluate_images(target_path: str, n_cols: int = 4, seed = 42):
     paths = image_path_iterator(pathlib.Path(target_path))
     shuffled_paths = random.sample(paths, len(paths))
 
-    for i, (eval_point, images) in enumerate(shuffled_paths):
-        # Plot images
-        plot_images(images, n_cols).show()
-
-        # Get image rating
-        while True:
-            try:
-                rating = int(input("What is the quality of the following images (1-5):\n"))
-                assert 0 < rating <= 5
-                break
-            except (ValueError, AssertionError):
-                print("Please provide an integer from 1 to 5")
+    for i, (eval_point, images) in tqdm.tqdm(enumerate(shuffled_paths)):
+        rating = rater.rate(eval_point, images)
 
         # Extract tau_a, tau_r from eval point
         tau_a = float(re.search(r"abs_\d+.?\d*", eval_point).group(0)[4:])
@@ -73,6 +115,8 @@ def plot_ratings(tau_a_range: tuple[float, float], tau_r_range: tuple[float, flo
 
 
 if __name__ == "__main__":
-    target = "../data/tolerance_grid/eval"
-    df = evaluate_images(target, 4)
+    rater = MetricRater(Metric.MIND, ref=torch.load("../refs/img64_features.pkl"))
+
+    target = "../data/tolerance_grid/eval_pisolver_2"
+    df = evaluate_images(target, rater)
     plot_ratings((0.1, 1), (0.5, 10), 20, df, target)
