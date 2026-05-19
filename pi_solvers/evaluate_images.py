@@ -83,7 +83,7 @@ def eval_features(
     print("Calculating metrics...")
     for m in metric:
         ref = stats if m.uses_stats() else x
-        print(f"Calculating {m.name}")
+        print(f"Calculating {m}")
         print(m(ref, x_hat))
 
     print("Finished")

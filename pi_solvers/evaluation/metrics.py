@@ -10,6 +10,7 @@ import numpy as np
 class Metrics(enum):
     MIND = MIND()
     FID = FID()
+    PrecisionRecall = PrecisionRecall()
 
     def uses_stats(self):
         return self.value.uses_stats()
@@ -48,12 +49,10 @@ class MIND(Metric):
         self._n_projections = n_projections
 
     def __call__(self, x, x_hat):
-        generator = torch.Generator(device=x.device).manual_seed(self._seed)
-
+        x = reduce_ref_dimensionality(x, x_hat, self._seed)
         n_samples, d = x_hat.shape
-        assert n_samples <= x.shape[0], "Ground truth needs to have at least as many samples as predicted"
 
-        x = x[torch.randint(x.shape[0], size=(n_samples,), generator=generator)]
+        generator = torch.Generator(device=x.device).manual_seed(self._seed)
 
         alpha = 3 * d
 
@@ -84,6 +83,9 @@ class MIND(Metric):
 
 
 class FID(Metric):
+    """
+    Frechet Inception Distance metric.
+    """
 
     def __init__(self, dtype = torch.float64):
         self._dtype = dtype
@@ -115,6 +117,93 @@ class FID(Metric):
         covs = sigma + sigma_hat - 2 * s
         return float(np.real(mu_diff + np.trace(covs)))
 
+    def __str__(self):
+        return "FID"
+
     @staticmethod
     def calc_mean_covariance(x: torch.Tensor) -> tuple[np.ndarray, np.ndarray]:
         return x.mean(dim=0).cpu().numpy(), x.T.cov().cpu().numpy()
+
+
+class PrecisionRecall(Metric):
+    """
+    Precision and Recall Metric. From https://arxiv.org/pdf/1904.06991
+    """
+
+    def __init__(self, k: int = 3, dtype = torch.float32, seed: int = 0):
+        self._k = k
+        self._dtype = dtype
+        self._seed = seed
+
+    def pretty_print(self, x: torch.Tensor, x_hat: torch.Tensor) -> str:
+        precision, recall = self(x, x_hat)
+        return f"Precision: {precision}, Recall: {recall}"
+
+    def __call__(self, x: torch.Tensor, x_hat: torch.Tensor) -> tuple[float, float]:
+        x = reduce_ref_dimensionality(x, x_hat, self._seed)
+
+        x, x_hat = x.to(self._dtype), x_hat.to(self._dtype)
+
+        dist_matrix = self.pairwise_distances(x, x_hat)
+
+        precision = self.precision(x, dist_matrix)
+        recall = self.recall(x_hat, dist_matrix)
+
+        return precision, recall
+
+    def precision(self, x: torch.Tensor, dist_matrix: torch.Tensor) -> float:
+        x_manifold = self.kth_nearest_neighbour(x)
+
+        f = torch.sum((dist_matrix.T <= x_manifold), dim=1) >= 1
+        return float(1 / x.shape[0] * torch.sum(f))
+
+    def recall(self, x_hat: torch.Tensor, dist_matrix: torch.tensor) -> float:
+        x_hat_manifold = self.kth_nearest_neighbour(x_hat)
+
+        f = torch.sum((dist_matrix <= x_hat_manifold), dim=0) >= 1
+        return float(1 / x_hat.shape[0] * torch.sum(f))
+
+    def pairwise_distances(self, x: torch.Tensor, x_hat: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the pairwise euclidian distance matrix between each vector in x to each vector
+        in x_hat.
+
+        :param x: Matrix of shape (N, d)
+        :param x_hat: Matrix of shape (N, d)
+        :return: Pairwise distance matrix of shape (N, N). Rows are x, columns are x_hat
+        """
+        # (x - y)^2 = x^2 + y^2 - 2xy
+        x, x_hat = x.to(self._dtype), x_hat.to(self._dtype)
+        return (torch.sum(x**2, dim=1, keepdim=True) + torch.sum(x_hat**2, dim=1) - 2 * x @ x_hat.T).clamp(min=0)
+
+    def kth_nearest_neighbour(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the distance to the kth nearest neighbour for each vector in x of shape
+        (N, d)
+
+        :param x: A matrix of feature vectors of shape (N, d)
+        :return: A vector of shape (N,) where each value is the Euclidean distance to the kth
+                nearest neighbour of that vector.
+        """
+        x = x.to(self._dtype)
+
+        dist_matrix = self.pairwise_distances(x, x)
+        topk, _ = torch.topk(dist_matrix, self._k + 1, dim=1, largest=False)
+        return topk[:, -1]
+
+    def __str__(self):
+        return "Precision/Recall"
+
+
+def reduce_ref_dimensionality(x: torch.Tensor, x_hat: torch.Tensor, seed: int) -> torch.Tensor:
+    """
+    Equalises the dimensionality between reference data and samples.
+
+    :param x: Reference data of shape (N, d).
+    :param x_hat: Sample data (M <= N, d).
+    :param seed: Random seed.
+    :return: x with randomly selected vectors of shape (M, d)
+    """
+    generator = torch.Generator(device=x.device).manual_seed(seed)
+    assert x_hat.shape[0] <= x.shape[0], "Ground truth needs to have at least as many samples as predicted"
+    return x[torch.randint(x.shape[0], size=(x_hat.shape[0],), generator=generator)]
