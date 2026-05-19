@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 import pathlib
 import re
 import random
-import pickle
 
 import torch
 import pandas as pd
@@ -13,9 +12,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import PowerNorm
 import numpy as np
 
-from pi_solvers import sde_lib, dnnlib
+from pi_solvers import sde_lib
 from pi_solvers.solver_lib import PISolver2
-from pi_solvers.utils import plot_images
+from pi_solvers.utils import plot_images, load_edm_checkpoint
 from pi_solvers.utils.data_logger import RejectCounter
 from pi_solvers.evaluation import feature_vector, metrics
 
@@ -52,7 +51,7 @@ class MetricRater(Rater):
 
     def __init__(
             self,
-            metric: metrics.Metric,
+            metric: metrics.Metrics,
             ref: torch.Tensor,
             batch_size: int = 64,
             device: str | torch.device = "cuda"
@@ -66,7 +65,7 @@ class MetricRater(Rater):
         features = feature_vector.detect_image_features(
             image_dir=eval_point, batch_size=self._batch_size, device=self._device
         )
-        return self._metric.get_func()(self._ref, features)
+        return self._metric(self._ref, features)
 
 
 def image_path_iterator(target_path: pathlib.Path) -> list[tuple[str, list[str]]]:
@@ -159,10 +158,8 @@ def apply_over_grid(
     torch.random.manual_seed(seed)
 
     # Load model
-    with dnnlib.util.open_url(model) as f:
-        data = pickle.load(f)
-    model = data["ema"].to(device)
-    encoder = data["encoder"]
+    model, encoder = load_edm_checkpoint(model)
+    model = model.to(device)
 
     # Create SDE
     sde = sde_lib.EDMSDE(ode=ode).to(device)
@@ -186,9 +183,10 @@ def apply_over_grid(
             torch.random.manual_seed(seed)
 
             tau_a, tau_r = float(grid[0][i, j]), float(grid[1][i, j])
-            sde.reset()
+            rsde.reset()
 
             reject_counter = RejectCounter()
+            print(tau_a, tau_r)
 
             solver = PISolver2.create_heun_end_pi_solver(
                 rsde,
@@ -205,7 +203,8 @@ def apply_over_grid(
                 os.makedirs(dir_path, exist_ok=True)
                 PIL.Image.fromarray(image, "RGB").save(os.path.join(dir_path, f"{k}_{label}.png"))
 
-            nfes[i, j] = rsde.nfe
+            nfes[i, j] = rsde.nfe / batch_size
+            print(nfes[i, j])
             reject_rate[i, j] = reject_counter.reject_rate()
 
     return nfes, reject_rate, grid

@@ -6,16 +6,13 @@ import matplotlib.pyplot as plt
 import torch
 from torchvision.io import decode_image
 
-from torchvision.models import inception_v3, Inception_V3_Weights
-
 from pi_solvers import dnnlib
-from pi_solvers.torch_utils.dataset import Dataset
 
 
 def write_general_info(path: str, **kwargs):
     with open(path, "w") as f:
         for key, value in kwargs.items():
-            f.write(f"{key}: {value}")
+            f.write(f"{key}: {value}\n")
 
 
 def broadcast_vector(vector: torch.Tensor, tensor: torch.Tensor) -> torch.Tensor:
@@ -36,10 +33,6 @@ def load_edm_checkpoint(url: str) -> tuple[Callable[[torch.Tensor, torch.Tensor,
     return model, encoder
 
 
-def get_feature_vectors(X: torch.Tensor) -> float:
-    return inception_v3(weights=Inception_V3_Weights.IMAGENET1K_V1, progress=True)(X)
-
-
 def plot_images(images: list[str], n_cols: int) -> plt.Figure:
     # Plot images
     fig, axes = plt.subplots(len(images) // n_cols, n_cols)
@@ -58,7 +51,7 @@ def plot_images(images: list[str], n_cols: int) -> plt.Figure:
     return fig
 
 
-class ImageSampleDataset(Dataset):
+class ImageSampleDataset(torch.utils.data.Dataset):
 
     def __init__(self, image_dir: str, n_images: int = 0, transform = None):
         self._images = list(pathlib.Path(image_dir).iterdir())

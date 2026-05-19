@@ -47,8 +47,8 @@ def main():
                         help="Proportional constant for step-size control (default 0.1).")
     parser.add_argument("--alpha", default=0.9, type=float,
                         help="Safety factor (default 0.9)")
-    parser.add_argument("--h_start", default=30, type=float,
-                        help="Starting step size (default 30).")
+    parser.add_argument("--h_start", default=0.5, type=float,
+                        help="Starting step size (default 0.5).")
     parser.add_argument("--max_decrease", default=0.05, type=float,
                         help="Maximum decrease factor in one step of the step size (default 0.05).")
     parser.add_argument("--max_increase", default=5, type=float,
@@ -57,7 +57,7 @@ def main():
                         help="Turn on batch normalisation, averaging the discretisation error over each batch, thus using the same step size for each image in the batch.")
     parser.add_argument("--abs_error", action='store_true',
                         help="Turn on absolute error normalisation instead of noise error normalisation.")
-    parser.add_argument("--metric", default=None, type=metrics.Metric, choices=list(metrics.Metric),
+    parser.add_argument("--metric", default=None, type=metrics.Metrics, choices=list(metrics.Metrics),
                         help="Metric to use for grid evaluation. If None, no grid evaluation is executed.")
     parser.add_argument("--ref", default=None, type=str,
                         help="Reference statistics relevant for the metric. If None, no grid evaluation is executed.")

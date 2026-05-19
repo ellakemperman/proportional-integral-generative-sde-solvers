@@ -30,7 +30,7 @@ def gen_features(
 
     if statistics_out:
         print("Calculating statistics...")
-        mean, covariance = metrics.calc_mean_covariance(features)
+        mean, covariance = metrics.FID.calc_mean_covariance(features)
         print("Saving statistics")
         torch.save({"mu": mean, "sigma": covariance}, statistics_out)
 
@@ -38,7 +38,7 @@ def gen_features(
 def eval_features(
         sample_dir: str,
         ref_dir: str,
-        metric: list[metrics.Metric],
+        metric: list[metrics.Metrics],
         sample_output: str = None,
         ref_output: str = None,
         ref_statistics: str = None,
@@ -84,7 +84,7 @@ def eval_features(
     for m in metric:
         ref = stats if m.uses_stats() else x
         print(f"Calculating {m.name}")
-        print(f"{m.name}: {m.get_func()(ref, x_hat)}")
+        print(m(ref, x_hat))
 
     print("Finished")
 
@@ -119,7 +119,7 @@ def main():
                                       help="Directory with the samples (then features are generated) or a saved torch.Tensor whose feature vectors can be used.")
     eval_features_parser.add_argument("ref_dir", type=str,
                                       help="Directory with the reference (then features are generated) or a saved torch.Tensor whose reference feature vectors can be used.")
-    eval_features_parser.add_argument("-m", "--metric", action="append", default=[], type=metrics.Metric, choices=list(metrics.Metric),
+    eval_features_parser.add_argument("-m", "--metric", action="append", default=[], type=metrics.Metrics, choices=list(metrics.Metrics),
                                       help="Metrics to be computed. Options are FID and MIND.")
     eval_features_parser.add_argument("-s", "--sample_output", default=None, type=str,
                                       help="Optional directory where sample features can be saved if these are computed.")
