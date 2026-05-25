@@ -7,28 +7,10 @@ from scipy.linalg import sqrtm
 import numpy as np
 
 
-class Metrics(enum):
-    MIND = MIND()
-    FID = FID()
-    PrecisionRecall = PrecisionRecall()
-
-    def uses_stats(self):
-        return self.value.uses_stats()
-
-    def pretty_print(self, x: torch.Tensor, x_hat: torch.Tensor):
-        return self.value.pretty_print(x, x_hat)
-
-    def __call__(self, x: torch.Tensor, x_hat: torch.Tensor):
-        return self.value(x, x_hat)
-
-    def __str__(self):
-        return str(self.value)
-
-
 class Metric(ABC):
 
     def pretty_print(self, x: torch.Tensor, x_hat: torch.Tensor) -> str:
-        return str(self) + ": " + str(round(self(x, x_hat), 4))
+        return str(self) + " = " + str(round(self(x, x_hat), 4))
 
     def uses_stats(self) -> bool:
         return False
@@ -44,7 +26,7 @@ class MIND(Metric):
     Evaluation: https://arxiv.org/html/2605.06797v1#A3.F10.sf2
     """
 
-    def __init__(self, seed: int = 0, n_projections: int = 0):
+    def __init__(self, seed: int = 0, n_projections: int = 100):
         self._seed = seed
         self._n_projections = n_projections
 
@@ -67,6 +49,7 @@ class MIND(Metric):
 
         x_proj = u_proj @ x.T
         x_hat_proj = u_proj @ x_hat.T
+
 
         dists = torch.mean(
             (
@@ -137,7 +120,7 @@ class PrecisionRecall(Metric):
 
     def pretty_print(self, x: torch.Tensor, x_hat: torch.Tensor) -> str:
         precision, recall = self(x, x_hat)
-        return f"Precision: {precision}, Recall: {recall}"
+        return f"Precision = {precision} \nRecall = {recall}"
 
     def __call__(self, x: torch.Tensor, x_hat: torch.Tensor) -> tuple[float, float]:
         x = reduce_ref_dimensionality(x, x_hat, self._seed)
@@ -192,7 +175,7 @@ class PrecisionRecall(Metric):
         return topk[:, -1]
 
     def __str__(self):
-        return "Precision/Recall"
+        return "PrecisionRecall"
 
 
 def reduce_ref_dimensionality(x: torch.Tensor, x_hat: torch.Tensor, seed: int) -> torch.Tensor:
@@ -207,3 +190,21 @@ def reduce_ref_dimensionality(x: torch.Tensor, x_hat: torch.Tensor, seed: int) -
     generator = torch.Generator(device=x.device).manual_seed(seed)
     assert x_hat.shape[0] <= x.shape[0], "Ground truth needs to have at least as many samples as predicted"
     return x[torch.randint(x.shape[0], size=(x_hat.shape[0],), generator=generator)]
+
+
+class Metrics(enum.Enum):
+    MIND = MIND()
+    FID = FID()
+    PrecisionRecall = PrecisionRecall()
+
+    def uses_stats(self):
+        return self.value.uses_stats()
+
+    def pretty_print(self, x: torch.Tensor, x_hat: torch.Tensor):
+        return self.value.pretty_print(x, x_hat)
+
+    def __call__(self, x: torch.Tensor, x_hat: torch.Tensor):
+        return self.value(x, x_hat)
+
+    def __str__(self):
+        return str(self.value)

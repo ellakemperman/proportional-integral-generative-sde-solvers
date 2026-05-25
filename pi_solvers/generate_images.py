@@ -73,7 +73,8 @@ def generate_em_images(
         ode: bool,
         exist_okay: bool,
         nfe: int,
-        rho: float
+        rho: float,
+        **kwargs
 ):
     print(f"Setting up EM-solver for {n_images} images...")
     image_path, write_path = setup_dirs("em", output, exist_okay)
@@ -88,7 +89,7 @@ def generate_em_images(
         ode=ode,
         exist_okay=exist_okay,
         nfe=nfe,
-        rho=rho
+        rho=rho,
     )
 
     discretisation = get_edm_schedule(nfe, rho=rho)
@@ -152,8 +153,8 @@ def generate_edm_images(
 def main():
     # Main argument parsing
     parser = argparse.ArgumentParser(description="Generates images using diffusion using EDM2 models, from sigma=80 to sigma=0",)
-    parser.add_argument("-b", "--batch_size", default=64, type=int,
-                        help="Batch size for image generation (default 64)")
+    parser.add_argument("-b", "--batch_size", default=48, type=int,
+                        help="Batch size for image generation (default 48)")
     parser.add_argument("-d", "--device", default="cuda", type=torch.device,
                         help="Device used for image generation (default cuda)")
     parser.add_argument("-n", "--n_images", default=50000, type=int,
@@ -218,7 +219,7 @@ def main():
                            help="Safety factor (default 0.9)")
     pi_parser.add_argument("--h_start", default=30, type=float,
                            help="Starting step size (default 30).")
-    pi_parser.add_argument("--max_decrease", default=0.05, type=float,
+    pi_parser.add_argument("--max_decrease", default=0.2, type=float,
                            help="Maximum decrease factor in one step of the step size (default 0.05).")
     pi_parser.add_argument("--max_increase", default=5, type=float,
                            help="Maximum increase factor in one step of the step size (default 5).")

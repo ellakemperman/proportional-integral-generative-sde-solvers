@@ -25,6 +25,8 @@ class GottaGoFast(Solver):
             alpha: float,
             interval: tuple[float, float] = (1, 0),
             max_iter: int = 1000,
+            max_increase: float = 5,
+            max_decrease: float = 0.2
     ):
         """
         Constructs the GottaGoFast solver.
@@ -46,6 +48,8 @@ class GottaGoFast(Solver):
         self._end_time = float(interval[1])
         self._h_start = abs(h_start) * (self._end_time - self._start_time) / abs(self._end_time - self._start_time)
         self._max_iter = max_iter
+        self._max_increase = torch.Tensor([max_increase])
+        self._max_decrease = torch.Tensor([max_decrease])
 
     def solve(self, x: torch.tensor, labels: torch.Tensor = None,
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
@@ -100,7 +104,7 @@ class GottaGoFast(Solver):
 
             # Update the full matrices
             x_full[not_finished], t_full[not_finished], h_full[not_finished] = x, t, h
-            x_first_prev_full[not_finished] = x_first
+            x_first_prev_full[not_finished] = x_first_prev
 
             if callback is not None:
                 callback(x_full, t_full, h_full, error)
@@ -116,10 +120,12 @@ class GottaGoFast(Solver):
 
     def _get_next_step(self, h: torch.Tensor, error: torch.Tensor):
         error_pow = torch.where(h == 0, h, broadcast_vector(error, h) ** -self._r)
-        return self._alpha * h * error_pow
+        return h * torch.max(self._max_decrease, torch.min(self._max_increase, self._alpha * error_pow))
 
     def to(self, device: torch.device | str) -> 'Solver':
         super().to(device)
         self._tau_r = self._tau_r.to(device)
         self._tau_a = self._tau_a.to(device)
+        self._max_increase = self._max_increase.to(self._device)
+        self._max_decrease = self._max_decrease.to(self._device)
         return self

@@ -1,3 +1,9 @@
+generate-images -n 5000 -o data/image_testing/pi_2/test/50NFE_5heun5 pi --tau_a 0.06 --tau_r 16.5 --h_start 40 --n_ode_steps 5 (1h, 10h for full)
+evaluate-images -n 5000 -b 512 eval-features data/image_testing/pi_2/test/50NFE_5heun5/images refs/img64_features.pkl --metric MIND -o data/image_testing/pi_2/test/50NFE_5heun5/data
+generate-images -n 5000 -o data/image_testing/pi_2/test/75NFE_5heun2 pi --tau_a 0.06 --tau_r 12.5 --h_start 35 --n_ode_steps 7 (1.5h, 15h for full)
+tolerance-grid 0.01 0.1 10 50 20 data/tolerance_grid/pi_2_highrtol --metric MIND --ref refs/img64_features.pkl
+
+
 Run everything 50 NFE ODE
 Run everything at 100 NFE
 Run everything at 150 NFE

@@ -186,7 +186,6 @@ def apply_over_grid(
             rsde.reset()
 
             reject_counter = RejectCounter()
-            print(tau_a, tau_r)
 
             solver = PISolver2.create_heun_end_pi_solver(
                 rsde,
@@ -204,7 +203,6 @@ def apply_over_grid(
                 PIL.Image.fromarray(image, "RGB").save(os.path.join(dir_path, f"{k}_{label}.png"))
 
             nfes[i, j] = rsde.nfe / batch_size
-            print(nfes[i, j])
             reject_rate[i, j] = reject_counter.reject_rate()
 
     return nfes, reject_rate, grid

@@ -41,6 +41,7 @@ def eval_features(
         metric: list[metrics.Metrics],
         sample_output: str = None,
         ref_output: str = None,
+        output: str = None,
         ref_statistics: str = None,
         batch_size: int = 64,
         device: str = "cuda",
@@ -84,7 +85,12 @@ def eval_features(
     for m in metric:
         ref = stats if m.uses_stats() else x
         print(f"Calculating {m}")
-        print(m(ref, x_hat))
+        data = m.pretty_print(ref, x_hat)
+        print(data)
+
+        if output:
+            with open(output + "/metrics.txt", "a") as f:
+                f.write(data + "\n")
 
     print("Finished")
 
@@ -119,12 +125,14 @@ def main():
                                       help="Directory with the samples (then features are generated) or a saved torch.Tensor whose feature vectors can be used.")
     eval_features_parser.add_argument("ref_dir", type=str,
                                       help="Directory with the reference (then features are generated) or a saved torch.Tensor whose reference feature vectors can be used.")
-    eval_features_parser.add_argument("-m", "--metric", action="append", default=[], type=metrics.Metrics, choices=list(metrics.Metrics),
+    eval_features_parser.add_argument("-m", "--metric", action="append", default=[], type=lambda metric: metrics.Metrics[metric], choices=list(metrics.Metrics),
                                       help="Metrics to be computed. Options are FID and MIND.")
     eval_features_parser.add_argument("-s", "--sample_output", default=None, type=str,
                                       help="Optional directory where sample features can be saved if these are computed.")
     eval_features_parser.add_argument("-r", "--ref_output", default=None, type=str,
                                       help="Optional directory where reference features can be saved if these are computed.")
+    eval_features_parser.add_argument("-o", "--output", default=None, type=str,
+                                      help="Optional file where metric data can be stored.")
     eval_features_parser.add_argument("--ref_statistics", default=None, type=str,
                                       help="Optional path to saved reference statistics")
     eval_features_parser.set_defaults(func=eval_features)

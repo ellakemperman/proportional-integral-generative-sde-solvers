@@ -64,7 +64,7 @@ class PISolver(Solver):
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
         t = broadcast_vector(torch.full((x.shape[0],), self._start_time), x).to(self._device)  # Initialise batch_size times, starting at 1
         h = broadcast_vector(torch.full((x.shape[0],), self._h_start), x).to(self._device)
-        error = torch.full((x.shape[0],), 0.5).to(self._device)
+        error = torch.full((x.shape[0],), self._alpha * self._tau_a).to(self._device)
         end_condition = broadcast_vector(torch.full((x.shape[0],), self._end_time), x).to(self._device)
         if labels is None:
             labels = torch.zeros(x.shape[0],)

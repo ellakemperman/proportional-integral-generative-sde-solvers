@@ -57,7 +57,7 @@ def main():
                         help="Turn on batch normalisation, averaging the discretisation error over each batch, thus using the same step size for each image in the batch.")
     parser.add_argument("--abs_error", action='store_true',
                         help="Turn on absolute error normalisation instead of noise error normalisation.")
-    parser.add_argument("--metric", default=None, type=metrics.Metrics, choices=list(metrics.Metrics),
+    parser.add_argument("--metric", default=None, type=lambda metric: metrics.Metrics[metric], choices=list(metrics.Metrics),
                         help="Metric to use for grid evaluation. If None, no grid evaluation is executed.")
     parser.add_argument("--ref", default=None, type=str,
                         help="Reference statistics relevant for the metric. If None, no grid evaluation is executed.")
@@ -75,7 +75,7 @@ def main():
 
     # Save grid
     print("Saving grid...")
-    df_nfe = pd.DataFrame((nfes / args.batch_size).cpu().numpy())
+    df_nfe = pd.DataFrame((nfes).cpu().numpy())
     df_nfe.to_csv(args.outdir + "/nfe.csv")
 
     df_reject = pd.DataFrame(reject_rate.cpu().numpy())
@@ -85,9 +85,10 @@ def main():
     print("Plotting grid...")
     hyperparameter_search.plot_grid(
         grid,
-        nfes / args.batch_size,
+        nfes,
         args.outdir,
-        "NFE"
+        "NFE",
+        gamma=0.5
     )
     hyperparameter_search.plot_grid(
         grid,
@@ -125,8 +126,6 @@ def main():
             grid,
             ratings,
             args.outdir,
-            f"{args.metric.value}"
+            f"{args.metric.value}",
+            gamma=0.5
         )
-
-if __name__ == "__main__":
-    main()
