@@ -1,10 +1,11 @@
 """Definitions of non-adaptive solvers, includes Euler-Marayuma, Heun, and EDM solver."""
 from typing import Callable
+
+import numpy as np
 import torch
 
 from pi_solvers.sde_lib import SDE, EDMSDE
 from pi_solvers.utils import broadcast_vector
-
 from pi_solvers.solver_lib.solvers import Solver
 
 
@@ -13,14 +14,14 @@ class EulerMarayumaSolver(Solver):
     The Euler Marayuma solver uses a simple first order scheme and pre-determined time-discretisation to solve the SDE.
     """
 
-    def __init__(self, sde: SDE, discretisation: torch.Tensor, **kwargs):
+    def __init__(self, sde: SDE, discretisation: torch.Tensor, seed: int = 0, **kwargs):
         r"""
         Constructs the EulerMarayuma Solver
 
         :param sde: The SDE the solver will have to solve.
         :param discretisation: The time steps :math:`(t_0, t_1, ..., t_n)` the solver will solve the SDE over.
         """
-        super().__init__(sde)
+        super().__init__(sde, seed=seed)
 
         self._discretisation = discretisation
         self._time_steps = discretisation[1:] - discretisation[:-1]
@@ -48,7 +49,7 @@ class HeunSolver(EulerMarayumaSolver):
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         for i, dt in enumerate(self._time_steps):
             t = broadcast_vector((self._discretisation[i] * torch.ones(x.shape[0])).to(self._device), x)
-            w = torch.randn_like(x)
+            w = torch.randn_like(x, generator=self._rng)
             dx_euler = self.sde.step(x, t, dt, w=w, labels=labels)
 
             if i < (self._time_steps.shape[0] - 1):
@@ -76,6 +77,18 @@ def get_edm_schedule(
     return discretisation
 
 
+def get_entropy_schedule(
+        n_steps: int,
+        entropy_checkpoint: str = "../../refs/img64_rescaled_entropic_time.pt"
+):
+    times = torch.load(entropy_checkpoint)["time"].flip(dims=(0,))
+    xp = np.arange(0, times.shape[0])
+    points = np.linspace(0, times.shape[0], n_steps - 1)
+    discretisation = np.interp(points, xp, times.numpy())
+    discretisation = np.concatenate([discretisation, np.array([0])])
+    return torch.tensor(discretisation)
+
+
 # Adapted from EDM2: https://github.com/NVlabs/edm2/tree/main
 class EDMSolver(Solver):
     """
@@ -96,6 +109,7 @@ class EDMSolver(Solver):
             S_max: float = float('inf'),
             S_noise: float = 1,
             dtype: torch.dtype = torch.float32,
+            seed: int = 0,
             **kwargs
     ):
         r"""
@@ -111,7 +125,7 @@ class EDMSolver(Solver):
         :param S_noise: How much noise should be added when churn.
         :param dtype: Dtype of all tensors.
         """
-        super().__init__(EDMSDE())
+        super().__init__(EDMSDE(), seed=seed)
         self._discretisation = discretisation
         self._model = model
         self._g_model = g_model
@@ -133,7 +147,7 @@ class EDMSolver(Solver):
             if self._S_churn > 0 and self._S_min <= t_cur <= self._S_max:
                 gamma = min(self._S_churn / n_steps, 2**0.5 - 1)
                 t_hat = t_cur + gamma * t_cur
-                x_hat = x_cur + (t_hat ** 2 - t_cur ** 2).sqrt() * self._S_noise * torch.randn_like(x_cur)
+                x_hat = x_cur + (t_hat ** 2 - t_cur ** 2).sqrt() * self._S_noise * torch.randn_like(x_cur, generator=self._rng)
             else:
                 t_hat = t_cur
                 x_hat = x_cur

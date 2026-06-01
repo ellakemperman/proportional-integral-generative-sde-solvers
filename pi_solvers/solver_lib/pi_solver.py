@@ -29,6 +29,7 @@ class PISolver(Solver):
                  max_iter: int = 10000,
                  abs_error: bool = False,
                  batch_norm: bool = False,
+                 seed: int = 0,
                  **kwargs
                  ):
         r"""
@@ -45,7 +46,7 @@ class PISolver(Solver):
         :param max_decrease: A factor determining the maximum decrease of the step size for each step.
         :param interval: The interval over which the SDE is computed
         """
-        super().__init__(sde)
+        super().__init__(sde, seed=seed)
         self._ki = ki
         self._kp = kp
         self._tau_a = tau_a
@@ -74,13 +75,13 @@ class PISolver(Solver):
         i = 0
 
         # Loop until all times in the batch are equal to the end time
-        while torch.any(not_finished := (t_full != end_condition)) and i < self._max_iter:
+        while torch.any(not_finished := (t_full > end_condition)) and i < self._max_iter:
             # Work with the unfinished subset of x, t, h
             not_finished = not_finished.reshape(-1)
             x, t, h = x_full[not_finished], t_full[not_finished], h_full[not_finished]
 
             # Perform Euler and Heun step
-            w = torch.randn_like(x)
+            w = torch.randn_like(x, generator=self._rng)
             dx_euler = self.sde.step(x, t, h, w, labels=labels[not_finished])
 
             # Multiplying by ((t + h) > 0) to make sure that this equals the euler step for points

@@ -13,7 +13,7 @@ class Solver(ABC):
     solution at a given time.
     """
 
-    def __init__(self, sde: SDE):
+    def __init__(self, sde: SDE, seed: int = 0):
         """
         Construct the solver.
 
@@ -21,6 +21,10 @@ class Solver(ABC):
         """
         self.__sde = sde
         self._device = "cpu"
+
+        sde.set_seed(seed)
+        self.__seed = seed
+        self._rng = torch.Generator().manual_seed(self.__seed)
 
     @property
     def sde(self):
@@ -41,4 +45,5 @@ class Solver(ABC):
 
     def to(self, device: torch.device | str) -> 'Solver':
         self._device = device
+        self._rng = torch.Generator(device=device).manual_seed(self.__seed)
         return self

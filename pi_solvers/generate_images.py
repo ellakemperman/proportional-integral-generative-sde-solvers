@@ -46,7 +46,7 @@ def generate_pi_images(
         **pi_kwargs
     )
 
-    solver_constructor = lambda sde, _: PISolver2.create_heun_end_pi_solver(sde=sde, **pi_kwargs)
+    solver_constructor = lambda sde, _: PISolver2.create_heun_end_pi_solver(sde=sde, seed=seed, **pi_kwargs)
     nfe = generate_images(
         solver_func=solver_constructor,
         outdir=image_path,
@@ -74,6 +74,7 @@ def generate_em_images(
         exist_okay: bool,
         nfe: int,
         rho: float,
+        entropy_checkpoint: str,
         **kwargs
 ):
     print(f"Setting up EM-solver for {n_images} images...")
@@ -91,9 +92,12 @@ def generate_em_images(
         nfe=nfe,
         rho=rho,
     )
+    if entropy_checkpoint is None:
+        discretisation = get_edm_schedule(nfe, rho=rho)
+    else:
+        discretisation = get_entropy_schedule(nfe, entropy_checkpoint)
 
-    discretisation = get_edm_schedule(nfe, rho=rho)
-    solver_constructor = lambda sde, _: EulerMarayumaSolver(sde=sde, discretisation=discretisation)
+    solver_constructor = lambda sde, _: EulerMarayumaSolver(sde=sde, discretisation=discretisation, seed=seed)
     generate_images(
         solver_func=solver_constructor,
         outdir=image_path,
@@ -117,6 +121,7 @@ def generate_edm_images(
         exist_okay: bool,
         nfe: int,
         rho: float,
+        entropy_checkpoint: str,
         **edm_kwargs
 ):
     print(f"Setting up EDM-solver for {n_images} images...")
@@ -135,9 +140,12 @@ def generate_edm_images(
         rho=rho,
         **edm_kwargs
     )
+    if entropy_checkpoint is None:
+        discretisation = get_edm_schedule(nfe // 2, rho=rho)
+    else:
+        discretisation = get_entropy_schedule(nfe // 2, entropy_checkpoint)
 
-    discretisation = get_edm_schedule(nfe // 2, rho=rho)
-    solver_constructor = lambda _, model: EDMSolver(model=model, discretisation=discretisation, **edm_kwargs)
+    solver_constructor = lambda _, model: EDMSolver(model=model, discretisation=discretisation, seed=seed, **edm_kwargs)
     generate_images(
         solver_func=solver_constructor,
         outdir=image_path,
@@ -179,6 +187,8 @@ def main():
                            help="Number of function evaluations to use (default 200).")
     em_parser.add_argument("--rho", default=7, type=float,
                            help="Which rho to use for the EDM schedule (default 7)")
+    em_parser.add_argument("--entropy_checkpoint", default=None, type=str,
+                            help="Which entropy checkpoint to use. Will make EM use an Entropic Time Scheduler: https://arxiv.org/abs/2504.13612")
     em_parser.set_defaults(func=generate_em_images)
 
     # EDM parser
@@ -188,6 +198,8 @@ def main():
                            help="Number of function evaluations to use (default 64).")
     edm_parser.add_argument("--rho", default=7, type=float,
                            help="Which rho to use for the EDM schedule (default 7)")
+    edm_parser.add_argument("--entropy_checkpoint", default=None, type=str,
+                            help="Which entropy checkpoint to use. Will make EDM use an Entropic Time Scheduler: https://arxiv.org/abs/2504.13612")
     edm_parser.add_argument("--S_churn", default=0, type=float,
                             help="Overall amount of stochasticity. If 0, this becomes a probability flow ODE (default 0).")
     edm_parser.add_argument("--S_min", default=0, type=float,
@@ -203,7 +215,7 @@ def main():
                                       help="Evaluate images using our solver.")
     pi_parser.add_argument("--max_iter", default=1000, type=int,
                            help="Maximum number of iterations before terminating (default 1000).")
-    pi_parser.add_argument("--ode_threshold", default=0.2, type=float,
+    pi_parser.add_argument("--ode_threshold", default=0.05, type=float,
                            help="Time (noise) threshold from which the solver switches to discretised Heun on ODE (default 0.2).")
     pi_parser.add_argument("--n_ode_steps", default=3, type=int,
                            help="Number of ODE steps the solver takes after switching to Heun ODE (default 3).")

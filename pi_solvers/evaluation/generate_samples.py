@@ -17,7 +17,6 @@ def generate_images(
         seed: int = 0,
         n_samples: int = 50000,
         batch_size: int = 64,
-        ode_threshold: float = 0.2,
         ode: bool = True,
         model_url: str = "../model/edm2-img64-xl-0671088-0.040.pkl",
         device: torch.device | str = "cuda",
@@ -30,7 +29,7 @@ def generate_images(
     model, encoder = utils.load_edm_checkpoint(model_url)
     model.to(device)
 
-    sde = EDMSDE(ode=ode).to(device).get_reverse_sde(model, ode_threshold=ode_threshold)
+    sde = EDMSDE(ode=ode).to(device).get_reverse_sde(model)
     solver = solver_func(sde, model).to(device)
 
     nfe = 0
@@ -38,6 +37,7 @@ def generate_images(
     print("Sampling images...")
     # Sampling loop
     for i in tqdm.tqdm(range(0, n_samples, batch_size)):
+
         # Bound batch size if new batch would exceed total amount of samples
         if (n_samples - i) < batch_size:
             batch_size = n_samples - i

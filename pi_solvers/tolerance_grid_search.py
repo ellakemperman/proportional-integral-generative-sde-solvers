@@ -37,9 +37,9 @@ def main():
                         help="Random seed (default 0)")
     parser.add_argument("--max_iter", default=1000, type=int,
                         help="Maximum number of iterations before terminating (default 1000).")
-    parser.add_argument("--ode_threshold", default=0.2, type=float,
+    parser.add_argument("--ode_threshold", default=0.05, type=float,
                         help="Time (noise) threshold from which the solver switches to discretised Heun on ODE (default 0.2).")
-    parser.add_argument("--n_ode_steps", default=3, type=int,
+    parser.add_argument("--n_ode_steps", default=5, type=int,
                         help="Number of ODE steps the solver takes after switching to Heun ODE (default 3).")
     parser.add_argument("--ki", default=0.3, type=float,
                         help="Integral constant for step-size control (default 0.3).")

@@ -191,6 +191,7 @@ def apply_over_grid(
                 rsde,
                 tau_a=tau_a,
                 tau_r=tau_r,
+                seed=seed,
                 **pi_kwargs
             ).to(device)
 

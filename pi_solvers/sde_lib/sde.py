@@ -12,11 +12,13 @@ class SDE(ABC):
     Where :math:`f(x,t)` is the drift, and :math:`g(t)` the diffusion.
     """
 
-    def __init__(self, ode: bool = False):
+    def __init__(self, ode: bool = False, seed: int = 0):
         self._nfe = 0
         self._device = "cpu"
         self._ode = ode
         self.__original_ode = ode
+        self._seed = seed
+        self._rng = torch.Generator().manual_seed(self._seed)
 
     @property
     def ode(self) -> bool:
@@ -29,6 +31,9 @@ class SDE(ABC):
     @property
     def nfe(self):
         return self._nfe
+
+    def set_seed(self, seed: int):
+        self._rng = torch.Generator(self._rng.device).manual_seed(seed)
 
     def reset(self):
         self._nfe = 0
@@ -78,7 +83,7 @@ class SDE(ABC):
         :return: x + dx, a tensor of shape (batch_size, d)
         """
         if w is None:
-            w = torch.randn_like(x).to(self._device)
+            w = torch.randn_like(x, generator=self._rng).to(self._device)
         drift, diffusion = self.sde(x, t, labels)
         if self.ode:
             return drift * dt
@@ -142,7 +147,7 @@ class SDE(ABC):
 
             def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor = None, labels: torch.Tensor = None) -> torch.Tensor:
                 if w is None:
-                    w = torch.randn_like(x).to(self._device)
+                    w = torch.randn_like(x, generator=self._rng).to(self._device)
                 w[t.view(x.shape[0]) < ode_threshold] = torch.zeros(w[t.view(x.shape[0]) < ode_threshold].shape).to(self._device)
                 if torch.any(t.view(x.shape[0]) < ode_threshold):
                     self.ode = True
@@ -152,6 +157,7 @@ class SDE(ABC):
 
     def to(self, device: str) -> 'SDE':
         self._device = device
+        self._rng = torch.Generator(device).manual_seed(self._seed)
         return self
 
 
@@ -182,8 +188,8 @@ class LinearDriftSDE(SDE, ABC):
         :return: A tuple of (:math:`x \sim p(x_t|x_0), \epsilon`), both with shape (batch_size, d)
         """
         mu, sigma = self.marginal(x, t)
-        noise = torch.randn_like(x).to(self._device)
-        return mu * x + sigma * torch.randn_like(x), noise
+        noise = torch.randn_like(x, generator=self._rng).to(self._device)
+        return mu * x + sigma * noise, noise
 
     def sample(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         r"""

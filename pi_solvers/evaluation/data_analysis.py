@@ -31,7 +31,7 @@ def analyse_pi_data(data_path: str, t_max: float = 80, t_min: float = 0.2, plot_
 
     # Take log of time
     ts = np.log(ts)
-    hs = np.log(-hs)
+    hs = np.log(np.abs(hs))
 
     print("Plotting...")
     # Plotting
@@ -41,7 +41,7 @@ def analyse_pi_data(data_path: str, t_max: float = 80, t_min: float = 0.2, plot_
     mesh = plt.hexbin(ts, hs, cmap="inferno", gridsize=(plot_res, plot_res), mincnt=0, bins="log")
     plt.colorbar(mesh, label='Probability Density')
 
-    # plt.xlim(t_max, t_min)
+    plt.xlim(np.log(t_max), np.log(t_min))
     # plt.xscale("log")
     plt.xlabel("noise/t")
     plt.ylabel("h")
@@ -50,4 +50,4 @@ def analyse_pi_data(data_path: str, t_max: float = 80, t_min: float = 0.2, plot_
 
 
 if __name__ == "__main__":
-    analyse_pi_data("../../data/image_testing/pi_2/50NFE_1/data", t_min=0.002, plot_res=100)
+    analyse_pi_data("../../data/image_testing/pi_2/75NFE_2/data", t_min=0.05, plot_res=100)

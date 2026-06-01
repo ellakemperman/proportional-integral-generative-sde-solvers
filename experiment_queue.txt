@@ -1,12 +1,10 @@
-generate-images -n 5000 -o data/image_testing/pi_2/test/50NFE_5heun5 pi --tau_a 0.06 --tau_r 16.5 --h_start 40 --n_ode_steps 5 (1h, 10h for full)
-evaluate-images -n 5000 -b 512 eval-features data/image_testing/pi_2/test/50NFE_5heun5/images refs/img64_features.pkl --metric MIND -o data/image_testing/pi_2/test/50NFE_5heun5/data
-generate-images -n 5000 -o data/image_testing/pi_2/test/75NFE_5heun2 pi --tau_a 0.06 --tau_r 12.5 --h_start 35 --n_ode_steps 7 (1.5h, 15h for full)
-tolerance-grid 0.01 0.1 10 50 20 data/tolerance_grid/pi_2_highrtol --metric MIND --ref refs/img64_features.pkl
+generate-images -b 16 --ode -n 50000 -o data/image_testing/pi_2/50NFE_ode_1 pi --tau_a 0.075 --tau_r 0.03 --h_start 20 --n_ode_steps 0 --batch_norm --ode_threshold 0
+evaluate-images -b 512 eval-features data/image_testing/pi_2/50NFE_4/images refs/img64_features.pkl --metric MIND --metric FID  --metric PrecisionRecall -o data/image_testing/pi_2/50NFE_4/data --ref_statistics refs/img64_stats.pkl
 
+generate-images -n 50000 -o data/image_testing/edm/50NFE_entropy_churn edm --nfe 50 --S_churn --S_min 0.05 --S_max 50 -- S_noise 1.003
 
-Run everything 50 NFE ODE
+Run everything at 25 NFE ODE
 Run everything at 100 NFE
-Run everything at 150 NFE
 
 Run Gotta Go Fast on all paradigms
 
