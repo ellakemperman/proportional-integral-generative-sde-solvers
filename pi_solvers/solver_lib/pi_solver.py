@@ -4,7 +4,7 @@ import torch
 
 from pi_solvers.solver_lib import HeunSolver, get_edm_schedule
 from pi_solvers.solver_lib.solvers import Solver
-from pi_solvers.sde_lib import SDE
+from pi_solvers.sde_lib import SDE, LinearDriftSDE
 from pi_solvers.utils import broadcast_vector
 
 
@@ -16,7 +16,7 @@ class PISolver(Solver):
     """
 
     def __init__(self,
-                 sde: SDE,
+                 sde: LinearDriftSDE,
                  ki: float,
                  kp: float,
                  tau_a: float,
@@ -135,7 +135,7 @@ class PISolver(Solver):
         """
         d = sum(x_first.shape[1:])
         if d != 1 and not self._abs_error:
-            norm = self._tau_a + self._tau_r * t
+            norm = self._tau_a + self._tau_r * self.sde.sigma(t)
         elif self._abs_error:
             norm = self._tau_a + self._tau_r * torch.abs(x_second)
         else:

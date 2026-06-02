@@ -91,6 +91,7 @@ def generate_em_images(
         exist_okay=exist_okay,
         nfe=nfe,
         rho=rho,
+        entropy_checkpoint=entropy_checkpoint,
     )
     if entropy_checkpoint is None:
         discretisation = get_edm_schedule(nfe, rho=rho)
@@ -138,6 +139,7 @@ def generate_edm_images(
         exist_okay=exist_okay,
         nfe=nfe,
         rho=rho,
+        entropy_checkpoint=entropy_checkpoint,
         **edm_kwargs
     )
     if entropy_checkpoint is None:

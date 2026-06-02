@@ -111,55 +111,6 @@ class SDE(ABC):
         """
         pass
 
-    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'SDE':
-        r"""
-        Reverses the SDE to the form :math:`dx = (f(x, t) - g(t)^2 \nabla_x \log p_t(x))dt + g(t)dw`
-
-        :param score_fn: The score function, a function s(x, t) for which :math:`s(x, t) \approx \nabla_x \log p_t(x)`
-                         which takes a tensor of shape (batch_size, d) and (batch_size, 1) and maps it to another
-                         tensor of (batch_size, d)
-        :param ode_threshold: Time threshold for when to apply ODE over SDE.
-        :return: The reversed SDE
-        """
-        parent = self
-
-        # Construct ReverseSDE class as child from SDE, use parent drift and diffusion but update drift to
-        # include the score
-        class ReverseSDE(SDE):
-            """A reversed SDE."""
-            def __init__(self):
-                super().__init__(ode=parent.ode)
-
-                self._parent = parent
-                self.to(parent._device)
-
-            @property
-            def parent(self) -> 'SDE':
-                return parent
-
-            def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
-                if self.ode:
-                    return self.parent.drift(x, t) - 0.5 * torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
-                return self.parent.drift(x, t) - torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
-
-            def diffusion(self, t: torch.Tensor) -> torch.Tensor:
-                return self.parent.diffusion(t)
-
-            def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor = None, labels: torch.Tensor = None) -> torch.Tensor:
-                if w is None:
-                    w = torch.randn_like(x, generator=self._rng).to(self._device)
-                w[t.view(x.shape[0]) < ode_threshold] = torch.zeros(w[t.view(x.shape[0]) < ode_threshold].shape).to(self._device)
-                if torch.any(t.view(x.shape[0]) < ode_threshold):
-                    self.ode = True
-                return super().step(x, t, dt, w, labels)
-
-        return ReverseSDE()
-
-    def to(self, device: str) -> 'SDE':
-        self._device = device
-        self._rng = torch.Generator(device).manual_seed(self._seed)
-        return self
-
 
 class LinearDriftSDE(SDE, ABC):
     r"""
@@ -221,3 +172,59 @@ class LinearDriftSDE(SDE, ABC):
         :return: The marginal standard deviation at time t, a tensor of shape (batch_size, d)
         """
         pass
+
+
+    def get_reverse_sde(self, score_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor], ode_threshold: float = 0) -> 'LinearDriftSDE':
+        r"""
+        Reverses the SDE to the form :math:`dx = (f(x, t) - g(t)^2 \nabla_x \log p_t(x))dt + g(t)dw`
+
+        :param score_fn: The score function, a function s(x, t) for which :math:`s(x, t) \approx \nabla_x \log p_t(x)`
+                         which takes a tensor of shape (batch_size, d) and (batch_size, 1) and maps it to another
+                         tensor of (batch_size, d)
+        :param ode_threshold: Time threshold for when to apply ODE over SDE.
+        :return: The reversed SDE
+        """
+        parent = self
+
+        # Construct ReverseSDE class as child from SDE, use parent drift and diffusion but update drift to
+        # include the score
+        class ReverseSDE(LinearDriftSDE):
+            """A reversed SDE."""
+            def __init__(self):
+                super().__init__(ode=parent.ode)
+
+                self._parent = parent
+                self.to(parent._device)
+
+            @property
+            def parent(self) -> 'LinearDriftSDE':
+                return parent
+
+            def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+                return parent.mu(x, t)
+
+            def sigma(self, t: torch.Tensor) -> torch.Tensor:
+                return parent.sigma(t)
+
+            def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
+                if self.ode:
+                    return self.parent.drift(x, t) - 0.5 * torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
+                return self.parent.drift(x, t) - torch.square(self.parent.diffusion(t)) * score_fn(x, t, labels)
+
+            def diffusion(self, t: torch.Tensor) -> torch.Tensor:
+                return self.parent.diffusion(t)
+
+            def step(self, x: torch.tensor, t: torch.tensor, dt: torch.tensor, w: torch.Tensor = None, labels: torch.Tensor = None) -> torch.Tensor:
+                if w is None:
+                    w = torch.randn_like(x, generator=self._rng).to(self._device)
+                w[t.view(x.shape[0]) < ode_threshold] = torch.zeros(w[t.view(x.shape[0]) < ode_threshold].shape).to(self._device)
+                if torch.any(t.view(x.shape[0]) < ode_threshold):
+                    self.ode = True
+                return super().step(x, t, dt, w, labels)
+
+        return ReverseSDE()
+
+    def to(self, device: str) -> 'SDE':
+        self._device = device
+        self._rng = torch.Generator(device).manual_seed(self._seed)
+        return self

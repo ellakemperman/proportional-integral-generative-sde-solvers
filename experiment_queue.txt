@@ -1,5 +1,5 @@
 generate-images -b 16 --ode -n 50000 -o data/image_testing/pi_2/50NFE_ode_1 pi --tau_a 0.075 --tau_r 0.03 --h_start 20 --n_ode_steps 0 --batch_norm --ode_threshold 0
-evaluate-images -b 512 eval-features data/image_testing/pi_2/50NFE_4/images refs/img64_features.pkl --metric MIND --metric FID  --metric PrecisionRecall -o data/image_testing/pi_2/50NFE_4/data --ref_statistics refs/img64_stats.pkl
+evaluate-images -b 512 eval-features data/image_testing/edm/50NFE_churn_2/images refs/img64_features.pkl --metric MIND --metric FID  --metric PrecisionRecall -o data/image_testing/pi_2/50NFE_churn_2/data --ref_statistics refs/img64_stats.pkl
 
 generate-images -n 50000 -o data/image_testing/edm/50NFE_entropy_churn edm --nfe 50 --S_churn --S_min 0.05 --S_max 50 -- S_noise 1.003
 
