@@ -2,10 +2,11 @@
 from typing import Callable
 
 import numpy as np
+import pandas as pd
 import torch
 
 from pi_solvers.sde_lib import SDE, EDMSDE
-from pi_solvers.utils import broadcast_vector
+from pi_solvers.utils import broadcast_vector, compute_discretisation_interpolation
 from pi_solvers.solver_lib.solvers import Solver
 
 
@@ -87,6 +88,29 @@ def get_entropy_schedule(
     discretisation = np.interp(points, xp, times.numpy())
     discretisation = np.concatenate([discretisation, np.array([0])])
     return torch.tensor(discretisation)
+
+
+def get_pi_schedule(
+        n_steps: int,
+        n_ode_steps: int,
+        pi_paths_file: str,
+        t_max: float = 80,
+        t_ode: float = 0.05,
+        t_min: float = 0.002
+):
+    # Load in t csv
+    ts = pd.read_csv(pi_paths_file).to_numpy()
+    # Add start time to histogram
+    ts[:, 0] = np.full(ts.shape[0], t_max)
+
+    # Get average schedule from the mean of the interpolation of all paths
+    _, pi_schedule, _ = compute_discretisation_interpolation(ts, n_steps)
+    pi_schedule = torch.tensor(pi_schedule)
+
+    # Add EDM schedule for the last few steps
+    edm_end = get_edm_schedule(n_ode_steps, t_min, t_ode)
+
+    return torch.cat([pi_schedule, edm_end])
 
 
 # Adapted from EDM2: https://github.com/NVlabs/edm2/tree/main

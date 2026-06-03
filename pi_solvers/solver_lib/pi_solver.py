@@ -102,7 +102,7 @@ class PISolver(Solver):
             error[not_finished] = new_error
 
             # Update x and t
-            not_rejected = error[not_finished] < 1
+            not_rejected = error[not_finished] < 1000
             x[not_rejected] = x_second[not_rejected]
             t[not_rejected] = t[not_rejected] + h[not_rejected]
 

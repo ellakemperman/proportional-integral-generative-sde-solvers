@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
-from KDEpy import FFTKDE
 import matplotlib.pyplot as plt
-from matplotlib.colors import PowerNorm
+
+from pi_solvers.solver_lib import get_edm_schedule
+from pi_solvers.utils import compute_discretisation_interpolation
 
 
 def assign_bin(x: float, bins: np.array):
@@ -12,42 +13,42 @@ def assign_bin(x: float, bins: np.array):
     return np.argmax(hist)
 
 
-def analyse_pi_data(data_path: str, t_max: float = 80, t_min: float = 0.2, plot_res: int = 200):
+def analyse_pi_data(data_path: str, t_max: float = 80, t_min: float = 0.05, plot_res: int = 200):
     # Load in t csv
     ts = pd.read_csv(data_path + "/_t.csv").to_numpy()
     # Add start time to histogram
     ts[:, 0] = np.full(ts.shape[0], t_max)
 
-    # Load in h csv
-    hs = pd.read_csv(data_path + "/_h.csv").to_numpy()
-    hs[:, 0] = np.full(hs.shape[0], ts[0, 1] - t_max)
+    t_grid, means, stds = compute_discretisation_interpolation(ts, plot_res)
 
-    # Flatten and emove 0 values from ts and hs
-    ts = ts.reshape(-1)
-    hs = hs.reshape(-1)
-    mask = ts != 0
-    ts = ts[mask]
-    hs = hs[mask]
+    # Reverse means and stds
+    means = means[::-1]
+    stds = stds[::-1]
 
-    # Take log of time
-    ts = np.log(ts)
-    hs = np.log(np.abs(hs))
+    # Filter out the low times
+    mask = t_grid > t_min
+    means = means[mask]
+    stds = stds[mask]
+    t_grid = np.linspace(0, 1, means.shape[0])
+
+    # EDM discretisation
+    discretisation = get_edm_schedule(plot_res, t_min=t_min)[:-1]
 
     print("Plotting...")
     # Plotting
-    plt.figure(figsize=(15, 7))
-    plt.title("Time conditional probability density of step size.")
-
-    mesh = plt.hexbin(ts, hs, cmap="inferno", gridsize=(plot_res, plot_res), mincnt=0, bins="log")
-    plt.colorbar(mesh, label='Probability Density')
-
-    plt.xlim(np.log(t_max), np.log(t_min))
-    # plt.xscale("log")
-    plt.xlabel("noise/t")
-    plt.ylabel("h")
-
+    # plt.figure(figsize=(15, 7))
+    # plt.title(r"$\sigma$ as a function of $t$")
+    plt.plot(t_grid, means, label="PI Mean Discretisation")
+    plt.fill_between(t_grid, means - stds, means + stds, label="±1 std", alpha=0.3)
+    plt.plot(np.linspace(1, 0, discretisation.shape[0]), discretisation, label="EDM Discretisation")
+    plt.legend()
+    plt.yscale("log")
+    plt.xlim(1, 0)
+    plt.xlabel("fraction along SDE path")
+    plt.ylabel("sigma")
+    plt.grid()
     plt.show()
 
 
 if __name__ == "__main__":
-    analyse_pi_data("../../data/image_testing/pi_2/75NFE_2/data", t_min=0.05, plot_res=100)
+    analyse_pi_data("../../data/image_testing/pi_2/75NFE_2/data", t_max=80, t_min=0.05)

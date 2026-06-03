@@ -1,6 +1,9 @@
 import argparse
 import datetime
 import os
+from multiprocessing.managers import Value
+
+from pygments.lexer import default
 
 from pi_solvers.solver_lib import *
 from pi_solvers.evaluation.generate_samples import generate_images
@@ -75,6 +78,7 @@ def generate_em_images(
         nfe: int,
         rho: float,
         entropy_checkpoint: str,
+        pi_discretisation: str,
         **kwargs
 ):
     print(f"Setting up EM-solver for {n_images} images...")
@@ -92,11 +96,19 @@ def generate_em_images(
         nfe=nfe,
         rho=rho,
         entropy_checkpoint=entropy_checkpoint,
+        pi_discretisation=pi_discretisation
     )
-    if entropy_checkpoint is None:
+    if entropy_checkpoint is None and pi_discretisation is None:
         discretisation = get_edm_schedule(nfe, rho=rho)
-    else:
+    elif entropy_checkpoint is not None and pi_discretisation is None:
         discretisation = get_entropy_schedule(nfe, entropy_checkpoint)
+    elif entropy_checkpoint is None and pi_discretisation is not None:
+        n_steps = int((nfe * 0.8))
+        n_ode_steps = nfe - n_steps
+        print(n_steps + n_ode_steps)
+        discretisation = get_pi_schedule(n_steps, n_ode_steps, pi_discretisation)
+    else:
+        raise ValueError("Only one of pi_discretisation and entropy_checkpoint should be set.")
 
     solver_constructor = lambda sde, _: EulerMarayumaSolver(sde=sde, discretisation=discretisation, seed=seed)
     generate_images(
@@ -123,6 +135,7 @@ def generate_edm_images(
         nfe: int,
         rho: float,
         entropy_checkpoint: str,
+        pi_discretisation: str,
         **edm_kwargs
 ):
     print(f"Setting up EDM-solver for {n_images} images...")
@@ -142,10 +155,17 @@ def generate_edm_images(
         entropy_checkpoint=entropy_checkpoint,
         **edm_kwargs
     )
-    if entropy_checkpoint is None:
+    if entropy_checkpoint is None and pi_discretisation is None:
         discretisation = get_edm_schedule(nfe // 2, rho=rho)
-    else:
+    elif entropy_checkpoint is not None and pi_discretisation is None:
         discretisation = get_entropy_schedule(nfe // 2, entropy_checkpoint)
+    elif entropy_checkpoint is None and pi_discretisation is not None:
+        n_steps = int((nfe * 0.8) // 2)
+        n_ode_steps = nfe // 2 - n_steps
+        print(n_steps + n_ode_steps)
+        discretisation = get_pi_schedule(n_steps, n_ode_steps, pi_discretisation)
+    else:
+        raise ValueError("Only one of pi_discretisation and entropy_checkpoint should be set.")
 
     solver_constructor = lambda _, model: EDMSolver(model=model, discretisation=discretisation, seed=seed, **edm_kwargs)
     generate_images(
@@ -191,6 +211,8 @@ def main():
                            help="Which rho to use for the EDM schedule (default 7)")
     em_parser.add_argument("--entropy_checkpoint", default=None, type=str,
                             help="Which entropy checkpoint to use. Will make EM use an Entropic Time Scheduler: https://arxiv.org/abs/2504.13612")
+    em_parser.add_argument("--pi_discretisation", default=None, type=str,
+                            help="Which PI paths file to use to compute a discretisation, if provided.")
     em_parser.set_defaults(func=generate_em_images)
 
     # EDM parser
@@ -202,6 +224,8 @@ def main():
                            help="Which rho to use for the EDM schedule (default 7)")
     edm_parser.add_argument("--entropy_checkpoint", default=None, type=str,
                             help="Which entropy checkpoint to use. Will make EDM use an Entropic Time Scheduler: https://arxiv.org/abs/2504.13612")
+    edm_parser.add_argument("--pi_discretisation", default=None, type=str,
+                            help="Which PI paths file to use to compute a discretisation, if provided.")
     edm_parser.add_argument("--S_churn", default=0, type=float,
                             help="Overall amount of stochasticity. If 0, this becomes a probability flow ODE (default 0).")
     edm_parser.add_argument("--S_min", default=0, type=float,

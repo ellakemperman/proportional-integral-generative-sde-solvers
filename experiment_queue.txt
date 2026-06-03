@@ -3,6 +3,11 @@ evaluate-images -b 512 eval-features data/image_testing/edm/50NFE_churn_2/images
 
 generate-images -n 50000 -o data/image_testing/edm/50NFE_entropy_churn edm --nfe 50 --S_churn --S_min 0.05 --S_max 50 -- S_noise 1.003
 
+generate-images -n 5000 -o data/image_testing/edm/50NFE_pi edm --nfe 50 --pi_discretisation data/image_testing/pi_2/50NFE_4/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/50NFE_pi/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/50NFE_pi/data --ref_statistics refs/img64_stats.pkl
+
+
+evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/50NFE_pi_churn/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/50NFE_pi_churn/data --ref_statistics refs/img64_stats.pkl
+
 Run everything at 25 NFE ODE
 Run everything at 100 NFE
 

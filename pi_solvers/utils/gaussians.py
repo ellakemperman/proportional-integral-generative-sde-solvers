@@ -149,12 +149,9 @@ class MultiGaussian:
 
         # Compute the sum of scores for each gaussian, computed by multiplying the score of the Gaussian by its value
         # at point x.
-        print("x", torch.any(x.isnan()))
         non_normalised_score = sum(map(lambda gaussian: gaussian.score(x) * gaussian(x), convolved_gaussians))
-        print("non_normalised", torch.any(non_normalised_score.isnan()))
         # Normalise by the sum of all Gaussians at point x, at small factor for when this is near 0
         normalisation = sum(map(lambda gaussian: gaussian(x), convolved_gaussians)) + 1e-13
-        print("normalisation", torch.min(normalisation), torch.max(normalisation))
 
         return torch.Tensor(non_normalised_score / normalisation)
 
