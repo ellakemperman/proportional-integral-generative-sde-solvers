@@ -54,8 +54,9 @@ def plot_images(images: list[str], n_cols: int) -> plt.Figure:
 
 def compute_discretisation_interpolation(
         paths: np.ndarray,
-        num_points: int = 200
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        num_points: int = 200,
+        t_min: float = 0.05
+) -> tuple[np.ndarray, np.ndarray]:
     """
     :param paths: Matrix of paths, where paths that have finished are 0 from that point on
     :param num_points: Number of points to compute the interpolation at
@@ -66,13 +67,17 @@ def compute_discretisation_interpolation(
 
     for i, path in enumerate(paths):
         # Remove all 0s from the path, as 0s indicate the path is finished
-        path = path[path > 0]
+        end_index = np.where(path <= t_min)[0][0]
+        path = path[:(end_index + 1)]
+
+        if end_index == 1:
+            continue
 
         # Compute interpolation
         path_grid = np.linspace(0, 1, path.shape[0])
         interpolated[i] = np.interp(t_grid, path_grid, path)
 
-    return t_grid, interpolated.mean(axis=0), interpolated.std(axis=0)
+    return t_grid, interpolated
 
 
 class ImageSampleDataset(torch.utils.data.Dataset):

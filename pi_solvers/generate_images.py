@@ -153,6 +153,7 @@ def generate_edm_images(
         nfe=nfe,
         rho=rho,
         entropy_checkpoint=entropy_checkpoint,
+        pi_discretisation=pi_discretisation,
         **edm_kwargs
     )
     if entropy_checkpoint is None and pi_discretisation is None:

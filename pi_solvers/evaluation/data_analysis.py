@@ -6,49 +6,109 @@ from pi_solvers.solver_lib import get_edm_schedule
 from pi_solvers.utils import compute_discretisation_interpolation
 
 
-def assign_bin(x: float, bins: np.array):
-    hist = np.histogram(x, bins=bins)[0]
-    if np.max(hist) == 0:
-        return -1
-    return np.argmax(hist)
+def detect_outliers(paths: np.ndarray, t_min: float = 0.05, n_outlier_steps: int = 15):
+    lengths = []
+
+    for i, path in enumerate(paths):
+        end_index = np.where(path <= t_min)[0][0]
+        path = path[:(end_index + 1)]
+
+        if end_index <= 2:
+            continue
+
+        if path.shape[0] < n_outlier_steps:
+            print(f"Outlier at {i} with lengths {path.shape[0]}")
+
+        lengths.append(path.shape[0])
+
+    plt.figure()
+    plt.hist(lengths)
+    plt.show()
 
 
-def analyse_pi_data(data_path: str, t_max: float = 80, t_min: float = 0.05, plot_res: int = 200):
+
+def get_paths(data_path: str, t_max: float, t_min: float, plot_res: int):
     # Load in t csv
     ts = pd.read_csv(data_path + "/_t.csv").to_numpy()
     # Add start time to histogram
     ts[:, 0] = np.full(ts.shape[0], t_max)
 
-    t_grid, means, stds = compute_discretisation_interpolation(ts, plot_res)
+    t_grid, paths = compute_discretisation_interpolation(ts, plot_res, t_min=t_min)
 
-    # Reverse means and stds
-    means = means[::-1]
-    stds = stds[::-1]
+    means, stds = paths.mean(axis=0), paths.std(axis=0)
 
-    # Filter out the low times
-    mask = t_grid > t_min
-    means = means[mask]
-    stds = stds[mask]
     t_grid = np.linspace(0, 1, means.shape[0])
+
+    return t_grid, means, stds, paths
+
+
+def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float = 80, t_min: float = 0.05, plot_res: int = 200, color: str = "r", n_paths: int = 3, seed=0):
+    np.random.seed(seed)
+    t_grid, means, stds, paths = get_paths(data_path, t_max, t_min, plot_res)
+
+    random_paths = paths[(0, 48), :]
 
     # EDM discretisation
     discretisation = get_edm_schedule(plot_res, t_min=t_min)[:-1]
 
     print("Plotting...")
     # Plotting
-    # plt.figure(figsize=(15, 7))
-    # plt.title(r"$\sigma$ as a function of $t$")
-    plt.plot(t_grid, means, label="PI Mean Discretisation")
-    plt.fill_between(t_grid, means - stds, means + stds, label="±1 std", alpha=0.3)
-    plt.plot(np.linspace(1, 0, discretisation.shape[0]), discretisation, label="EDM Discretisation")
-    plt.legend()
+    ax.plot(t_grid, means, label=label, c=color)
+    ax.fill_between(t_grid, means + stds, means -stds, alpha=0.1, color=color)
+
+    # Plot random paths
+    for i in range(2):
+        ax.plot(t_grid, random_paths[i, :], label=f"Sample Path {i}", linewidth=1)
+
+    plt.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Discretisation")
+    ax.legend()
     plt.yscale("log")
-    plt.xlim(1, 0)
-    plt.xlabel("fraction along SDE path")
-    plt.ylabel("sigma")
-    plt.grid()
-    plt.show()
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("fraction along SDE path")
+    ax.set_ylim(t_min, t_max)
+    ax.set_ylabel("sigma")
+    ax.grid()
+    return ax
+
+
+def analyse_pi_gaussian_trajectories(ax, label: str, data_path: str, t_max: float = 1, t_min: float = 0, plot_res: int = 200, color: str = "r", n_paths: int = 3, seed=0):
+    np.random.seed(seed)
+    t_grid, means, stds, paths = get_paths(data_path, t_max, t_min, plot_res)
+
+    random_paths = paths[np.random.choice(paths.shape[0], n_paths), :]
+
+    print("Plotting...")
+    # Plotting
+    ax.plot(t_grid, means, label=label, c=color)
+    ax.fill_between(t_grid, means - stds, means + stds, alpha=0.1, color=color)
+
+    # Plot random paths
+    for i in range(n_paths):
+        ax.plot(t_grid, random_paths[i, :], label=f"Sample Path {i}", linewidth=1)
+
+    ax.legend()
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("fraction along SDE path")
+    ax.set_ylim(t_max, t_min)
+    ax.set_ylabel("t")
+    ax.grid()
+    return ax
 
 
 if __name__ == "__main__":
-    analyse_pi_data("../../data/image_testing/pi_2/75NFE_2/data", t_max=80, t_min=0.05)
+    data_path = "../../data/image_testing/pi_2/75NFE_2/data"
+    t_min = 0.05
+    t_max = 80
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    generate_pi_image_trajectories(ax, data_path=data_path, label="50 NFE", t_min=t_min, t_max=t_max)
+
+    fig.show()
+
+    ts = pd.read_csv(data_path + "/_t.csv").to_numpy()
+    # Add start time to histogram
+    ts[:, 0] = np.full(ts.shape[0], t_max)
+
+    detect_outliers(ts, t_min)
