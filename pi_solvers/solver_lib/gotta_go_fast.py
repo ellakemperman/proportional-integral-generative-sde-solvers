@@ -26,7 +26,9 @@ class GottaGoFast(Solver):
             interval: tuple[float, float] = (1, 0),
             max_iter: int = 1000,
             max_increase: float = 5,
-            max_decrease: float = 0.2
+            max_decrease: float = 0.2,
+            seed: int = 0,
+            **kwargs
     ):
         """
         Constructs the GottaGoFast solver.
@@ -39,7 +41,7 @@ class GottaGoFast(Solver):
         :param alpha: Safety factor
         :param interval: Interval of integration
         """
-        super().__init__(sde)
+        super().__init__(sde, seed)
         self._tau_a = torch.tensor([tau_a])
         self._tau_r = torch.tensor([tau_r])
         self._r = r
@@ -56,12 +58,13 @@ class GottaGoFast(Solver):
         t = broadcast_vector(torch.full((x.shape[0],), self._start_time), x).to(
             self._device)  # Initialise batch_size times, starting at 1
         h = broadcast_vector(torch.full((x.shape[0],), self._h_start), x).to(self._device)
-        x_first_prev_full = x
+        x_first_prev_full = x.clone()
+        prev_rejected_full = torch.zeros(x.shape[0], dtype=torch.bool).to(self._device)
+        prev_w_full = torch.zeros_like(x)
+        error = torch.zeros(x.shape[0]).to(self._device)
         end_condition = broadcast_vector(torch.full((x.shape[0],), self._end_time), x).to(self._device)
         if labels is None:
             labels = torch.zeros(x.shape[0], )
-        reject_count = 0
-        not_reject_count = 0
         x_full, t_full, h_full = x, t, h
         i = 0
 
@@ -71,9 +74,13 @@ class GottaGoFast(Solver):
             not_finished = not_finished.reshape(-1)
             x, t, h = x_full[not_finished], t_full[not_finished], h_full[not_finished]
             x_first_prev = x_first_prev_full[not_finished]
+            prev_rejected = prev_rejected_full[not_finished]
+            prev_w = prev_w_full[not_finished]
 
             # Perform Euler and Heun step
-            w = torch.randn_like(x)
+            w = torch.randn_like(x, generator=self._rng)
+            w[prev_rejected] = prev_w[prev_rejected]
+
             dx_euler = self.sde.step(x, t, h, w, labels=labels[not_finished])
 
             # Multiplying by ((t + h) > 0) to make sure that this equals the euler step for points
@@ -85,19 +92,20 @@ class GottaGoFast(Solver):
             x_second = x + 0.5 * (dx_euler + dx_heun)
 
             # Compute extrapolated error
-            error = self._error(x_first, x_first_prev, x_second)
+            error[not_finished] = self._error(x_first, x_first_prev, x_second)
 
             # Update x and t
-            not_rejected = error < 1
+            not_rejected = error[not_finished] < 1
             x[not_rejected] = x_second[not_rejected]
             t[not_rejected] = t[not_rejected] + h[not_rejected]
             x_first_prev[not_rejected] = x_first[not_rejected]
 
-            reject_count += torch.sum(error > 1)
-            not_reject_count += torch.sum(not_rejected)
+            # Prevent new sampling of w for rejections
+            prev_rejected = torch.logical_not(not_rejected)
+            prev_w[prev_rejected] = w[prev_rejected]
 
             # Get next step size
-            h = self._get_next_step(h, error)
+            h = self._get_next_step(h, error[not_finished])
 
             # Bound steps such that no step exceeding end condition will be taken
             h = torch.maximum(h, end_condition[not_finished] - t)
@@ -105,12 +113,13 @@ class GottaGoFast(Solver):
             # Update the full matrices
             x_full[not_finished], t_full[not_finished], h_full[not_finished] = x, t, h
             x_first_prev_full[not_finished] = x_first_prev
+            prev_rejected_full[not_finished] = prev_rejected
+            prev_w_full[not_finished] = prev_w
 
             if callback is not None:
                 callback(x_full, t_full, h_full, error)
             i += 1
 
-        print(reject_count / (reject_count + not_reject_count))
         return x_full
 
     def _error(self, x_first: torch.Tensor, x_first_prev: torch.Tensor, x_second: torch.Tensor):

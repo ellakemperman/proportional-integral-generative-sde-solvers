@@ -1,9 +1,6 @@
 import argparse
 import datetime
 import os
-from multiprocessing.managers import Value
-
-from pygments.lexer import default
 
 from pi_solvers.solver_lib import *
 from pi_solvers.evaluation.generate_samples import generate_images
@@ -49,7 +46,7 @@ def generate_pi_images(
         **pi_kwargs
     )
 
-    solver_constructor = lambda sde, _: PISolver2.create_heun_end_pi_solver(sde=sde, seed=seed, **pi_kwargs)
+    solver_constructor = lambda sde, _: construct_heun_end_adaptive_solver(adaptive_solver_class=PISolver, sde=sde, seed=seed, **pi_kwargs)
     nfe = generate_images(
         solver_func=solver_constructor,
         outdir=image_path,
@@ -60,6 +57,49 @@ def generate_pi_images(
         model_url=model,
         device=device,
         callback=PIDataLogger(write_path=write_path, max_iter=pi_kwargs["max_iter"], batch_size=batch_size)
+    )
+
+    with open(write_path + "info.txt", 'a') as f:
+        f.write(f"nfe: {nfe}")
+
+
+def generate_ggf_images(
+        batch_size: int,
+        device: torch.device,
+        n_images: int,
+        model: str,
+        seed: int,
+        output: str,
+        ode: bool,
+        exist_okay: bool,
+        **ggf_kwargs
+):
+    print(f"Setting up Gotta-Go-Fast-solver for {n_images} images...")
+    image_path, write_path = setup_dirs("ggf", output, exist_okay)
+
+    write_general_info(
+        path=write_path + "info.txt",
+        batch_size=batch_size,
+        device=device,
+        n_images=n_images,
+        model=model,
+        seed=seed,
+        ode=ode,
+        exist_okay=exist_okay,
+        **ggf_kwargs
+    )
+
+    solver_constructor = lambda sde, _: construct_heun_end_adaptive_solver(adaptive_solver_class=GottaGoFast, sde=sde, seed=seed, **ggf_kwargs)
+    nfe = generate_images(
+        solver_func=solver_constructor,
+        outdir=image_path,
+        n_samples=n_images,
+        batch_size=batch_size,
+        ode=ode,
+        seed=seed,
+        model_url=model,
+        device=device,
+        callback=PIDataLogger(write_path=write_path, max_iter=ggf_kwargs["max_iter"], batch_size=batch_size)
     )
 
     with open(write_path + "info.txt", 'a') as f:
@@ -267,6 +307,31 @@ def main():
     pi_parser.add_argument("--abs_error", action='store_true',
                            help="Turn on absolute error normalisation instead of noise error normalisation.")
     pi_parser.set_defaults(func=generate_pi_images)
+
+    # proportional-integral parser
+    ggf_parser = subparsers.add_parser("gotta-go-fast", aliases=["ggf"],
+                                      help="Evaluate images using the Gotta Go Fast solver (Jolicoeur-Martineau et al, 2021).")
+    ggf_parser.add_argument("--max_iter", default=1000, type=int,
+                           help="Maximum number of iterations before terminating (default 1000).")
+    ggf_parser.add_argument("--ode_threshold", default=0.05, type=float,
+                           help="Time (noise) threshold from which the solver switches to discretised Heun on ODE (default 0.2).")
+    ggf_parser.add_argument("--n_ode_steps", default=3, type=int,
+                           help="Number of ODE steps the solver takes after switching to Heun ODE (default 3).")
+    ggf_parser.add_argument("--tau_a", default=0.0078, type=float,
+                           help="Absolute tolerance (default 0.0078).")
+    ggf_parser.add_argument("--tau_r", default=10, type=float,
+                           help="Relative tolerance. Increasing directly decreases NFE (default 10).")
+    ggf_parser.add_argument("--r", default=0.1, type=float,
+                            help="Hyperparameter for error scaling (default 0.1).")
+    ggf_parser.add_argument("--alpha", default=0.7, type=float,
+                           help="Safety factor (default 0.7)")
+    ggf_parser.add_argument("--h_start", default=20, type=float,
+                           help="Starting step size (default 20).")
+    ggf_parser.add_argument("--max_decrease", default=0.2, type=float,
+                           help="Maximum decrease factor in one step of the step size (default 0.05).")
+    ggf_parser.add_argument("--max_increase", default=5, type=float,
+                           help="Maximum increase factor in one step of the step size (default 5).")
+    ggf_parser.set_defaults(func=generate_ggf_images)
 
     args = parser.parse_args()
     args.func(**vars(args))

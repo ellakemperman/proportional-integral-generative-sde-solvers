@@ -7,8 +7,13 @@ generate-images -n 5000 -o data/image_testing/edm/50NFE_pi_ edm --nfe 50 --pi_di
 
 
 evaluate-images -b 512 eval-features data/image_testing/edm/50NFE_pi_churn/images refs/img64_features.pkl --metric MIND --FID --PrecisionRecall -o data/image_testing/edm/50NFE_pi_churn/data --ref_statistics refs/img64_stats.pkl
+--metric FID --metric PrecisionRecall
+generate-images -n 50000 -o data/image_testing/edm/75NFE_pi_churn edm --nfe 75 --S_churn 40 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/75NFE_pi_churn/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/75NFE_pi_churn/data --ref_statistics refs/img64_stats.pkl
 
-generate-images -n 5000 -o data/image_testing/edm/50NFE_pi_churn_2 edm --nfe 50 --S_churn 40 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/50NFE_pi_churn_2/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/50NFE_pi_churn_2/data --ref_statistics refs/img64_stats.pkl
+generate-images -n 5000 -o data/image_testing/edm/test/50NFE_pi_churn_low edm --nfe 50 --S_churn 60 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/test/50NFE_pi_churn_low/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/test/50NFE_pi_churn_low/data --ref_statistics refs/img64_stats.pkl
+generate-images -n 5000 -o data/image_testing/edm/test/50NFE_pi_churn_high edm --nfe 50 --S_churn 100 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/test/50NFE_pi_churn_high/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/test/50NFE_pi_churn_high/data --ref_statistics refs/img64_stats.pkl
+
+generate-images -n 50000 -o data/image_testing/ggf/50NFE ggf --tau_a 0.0078 --tau_r 24.5 --h_start 25 --r 0.1 --n_ode_steps 5
 
 Run everything at 25 NFE ODE
 Run everything at 100 NFE

@@ -163,41 +163,32 @@ class PISolver(Solver):
         return self
 
 
-class PISolver2(PISolver):
+def construct_heun_end_adaptive_solver(adaptive_solver_class,
+                                       sde: SDE,
+                                       ode_threshold: float,
+                                       n_ode_steps: int,
+                                       interval: tuple[float, float] = (80, 0.002),
+                                       rho: float = 7,
+                                       **kwargs
+                                       ):
+    class HeunEndSolver(adaptive_solver_class):
 
-    def __init__(
-            self,
-            sde: SDE,
-            ode_threshold: float,
-            ode_solver: Solver,
-            interval: tuple[float, float] = (80, 0.002),
-            **kwargs
-    ):
-        pi_interval = (interval[0], ode_threshold)
-        super().__init__(sde, interval=pi_interval, **kwargs)
+        def __init__(self):
+            pi_interval = (interval[0], ode_threshold)
+            super().__init__(sde, interval=pi_interval, **kwargs)
 
-        self._ode_solver = ode_solver
+            discretisation = get_edm_schedule(n_ode_steps, interval[1], ode_threshold, rho=rho)
+            self._ode_solver = HeunSolver(sde, discretisation)
 
-    def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
-              callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
-        x_sde = super().solve(x, labels, callback)
-        self.sde.ode = True
-        return self._ode_solver.solve(x_sde, labels)
+        def solve(self, x: torch.Tensor, labels: torch.Tensor = None,
+                  callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.Tensor:
+            x_sde = super().solve(x, labels, callback)
+            self.sde.ode = True
+            return self._ode_solver.solve(x_sde, labels)
 
-    def to(self, device: str) -> Solver:
-        super().to(device)
-        self._ode_solver.to(device)
-        return self
+        def to(self, device: str) -> Solver:
+            super().to(device)
+            self._ode_solver.to(device)
+            return self
 
-    @classmethod
-    def create_heun_end_pi_solver(
-            cls,
-            sde: SDE,
-            ode_threshold: float,
-            n_ode_steps: int = 2,
-            rho: float = 7,
-            interval: tuple[float, float] = (80, 0.002),
-            **kwargs):
-        discretisation = get_edm_schedule(n_ode_steps, interval[1], ode_threshold, rho=rho)
-        heun_solver = HeunSolver(sde, discretisation)
-        return cls(sde, ode_threshold, heun_solver, interval, **kwargs)
+    return HeunEndSolver()

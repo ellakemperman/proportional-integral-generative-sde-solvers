@@ -37,7 +37,7 @@ class PIDataLogger(DataLogger):
 
         self._ts[:batch_size, self._i] = t.to(self._device).reshape(batch_size)
         self._hs[:batch_size, self._i] = h.to(self._device).reshape(batch_size)
-        self._errors [:batch_size, self._i] = error.to(self._device).reshape(batch_size)
+        # self._errors [:batch_size, self._i] = error.to(self._device).reshape(batch_size)
 
         self._i += 1
 
