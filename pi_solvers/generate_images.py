@@ -49,6 +49,7 @@ def generate_pi_images(
     solver_constructor = lambda sde, _: construct_heun_end_adaptive_solver(adaptive_solver_class=PISolver, sde=sde, seed=seed, **pi_kwargs)
     nfe = generate_images(
         solver_func=solver_constructor,
+        ode_threshold=0,
         outdir=image_path,
         n_samples=n_images,
         batch_size=batch_size,
@@ -93,6 +94,7 @@ def generate_ggf_images(
     nfe = generate_images(
         solver_func=solver_constructor,
         outdir=image_path,
+        ode_threshold=0,
         n_samples=n_images,
         batch_size=batch_size,
         ode=ode,
@@ -119,6 +121,8 @@ def generate_em_images(
         rho: float,
         entropy_checkpoint: str,
         pi_discretisation: str,
+        heun: bool,
+        ode_threshold: float,
         **kwargs
 ):
     print(f"Setting up EM-solver for {n_images} images...")
@@ -136,8 +140,13 @@ def generate_em_images(
         nfe=nfe,
         rho=rho,
         entropy_checkpoint=entropy_checkpoint,
-        pi_discretisation=pi_discretisation
+        pi_discretisation=pi_discretisation,
+        heun=heun,
+        ode_threshold=ode_threshold
     )
+    if heun:
+        nfe = (nfe + 1) // 2
+
     if entropy_checkpoint is None and pi_discretisation is None:
         discretisation = get_edm_schedule(nfe, rho=rho)
     elif entropy_checkpoint is not None and pi_discretisation is None:
@@ -150,7 +159,10 @@ def generate_em_images(
     else:
         raise ValueError("Only one of pi_discretisation and entropy_checkpoint should be set.")
 
-    solver_constructor = lambda sde, _: EulerMarayumaSolver(sde=sde, discretisation=discretisation, seed=seed)
+    if heun:
+        solver_constructor = lambda sde, _: HeunSolver(sde=sde, discretisation=discretisation, seed=seed)
+    else:
+        solver_constructor = lambda sde, _: EulerMarayumaSolver(sde=sde, discretisation=discretisation, seed=seed)
     generate_images(
         solver_func=solver_constructor,
         outdir=image_path,
@@ -159,7 +171,8 @@ def generate_em_images(
         ode=ode,
         seed=seed,
         model_url=model,
-        device=device
+        device=device,
+        ode_threshold=ode_threshold
     )
 
 
@@ -197,9 +210,9 @@ def generate_edm_images(
         **edm_kwargs
     )
     if entropy_checkpoint is None and pi_discretisation is None:
-        discretisation = get_edm_schedule(nfe // 2, rho=rho)
+        discretisation = get_edm_schedule((nfe + 1) // 2, rho=rho)
     elif entropy_checkpoint is not None and pi_discretisation is None:
-        discretisation = get_entropy_schedule(nfe // 2, entropy_checkpoint)
+        discretisation = get_entropy_schedule((nfe + 1) // 2, entropy_checkpoint)
     elif entropy_checkpoint is None and pi_discretisation is not None:
         n_steps = int((nfe * 0.8) // 2)
         n_ode_steps = nfe // 2 - n_steps
@@ -240,6 +253,8 @@ def main():
                         help="Output directory. If not stated, creates a default directory: data/image_testing/solver_name/")
     parser.add_argument("-e", "--exist_okay", action='store_true',
                         help="Overwrite existing directory if it exists.")
+    parser.add_argument("--ode_threshold", default=0.05, type=float,
+                        help="Time (noise) threshold from which the solver switches to ODE.")
 
     subparsers = parser.add_subparsers(title="Solvers")
 
@@ -254,6 +269,8 @@ def main():
                             help="Which entropy checkpoint to use. Will make EM use an Entropic Time Scheduler: https://arxiv.org/abs/2504.13612")
     em_parser.add_argument("--pi_discretisation", default=None, type=str,
                             help="Which PI paths file to use to compute a discretisation, if provided.")
+    em_parser.add_argument("--heun", action="store_true",
+                           help="Use Heun sampling instead of EM.")
     em_parser.set_defaults(func=generate_em_images)
 
     # EDM parser
@@ -313,8 +330,6 @@ def main():
                                       help="Evaluate images using the Gotta Go Fast solver (Jolicoeur-Martineau et al, 2021).")
     ggf_parser.add_argument("--max_iter", default=1000, type=int,
                            help="Maximum number of iterations before terminating (default 1000).")
-    ggf_parser.add_argument("--ode_threshold", default=0.05, type=float,
-                           help="Time (noise) threshold from which the solver switches to discretised Heun on ODE (default 0.2).")
     ggf_parser.add_argument("--n_ode_steps", default=3, type=int,
                            help="Number of ODE steps the solver takes after switching to Heun ODE (default 3).")
     ggf_parser.add_argument("--tau_a", default=0.0078, type=float,

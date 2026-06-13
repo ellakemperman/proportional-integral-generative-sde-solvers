@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import pathlib
 import re
 import random
+import scienceplots
 
 import torch
 import pandas as pd
@@ -13,7 +14,7 @@ from matplotlib.colors import PowerNorm
 import numpy as np
 
 from pi_solvers import sde_lib
-from pi_solvers.solver_lib import PISolver2
+from pi_solvers.solver_lib import construct_heun_end_adaptive_solver, PISolver
 from pi_solvers.utils import plot_images, load_edm_checkpoint
 from pi_solvers.utils.data_logger import RejectCounter
 from pi_solvers.evaluation import feature_vector, metrics
@@ -130,13 +131,14 @@ def plot_grid(
 ):
     # Create and save plots
     plt.figure()
+    plt.style.use("science")
     mesh = plt.pcolormesh(grid[0], grid[1], data, cmap='inferno', norm=PowerNorm(gamma=gamma))
     plt.colorbar(mesh, label=f'{name}')
-    plt.xlabel(r"$\tau_a$")
-    plt.ylabel(r"$\tau_r$")
+    plt.xlabel(r"$\tau_a$", fontsize=15)
+    plt.ylabel(r"$\tau_r$", fontsize=15)
     if not title:
         title = rf"{name} as a function of $\tau_a$ and $\tau_r$"
-    plt.title(title)
+    # plt.title(title)
     plt.savefig(outdir + f"/{name}.png")
 
 
@@ -187,8 +189,9 @@ def apply_over_grid(
 
             reject_counter = RejectCounter()
 
-            solver = PISolver2.create_heun_end_pi_solver(
+            solver = construct_heun_end_adaptive_solver(
                 rsde,
+                adaptive_solver_class=PISolver,
                 tau_a=tau_a,
                 tau_r=tau_r,
                 seed=seed,

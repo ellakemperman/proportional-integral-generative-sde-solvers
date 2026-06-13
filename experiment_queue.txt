@@ -1,7 +1,7 @@
 generate-images -b 16 --ode -n 50000 -o data/image_testing/pi_2/50NFE_ode_1 pi --tau_a 0.075 --tau_r 0.03 --h_start 20 --n_ode_steps 0 --batch_norm --ode_threshold 0
 evaluate-images -b 512 eval-features data/image_testing/edm/50NFE_churn_2/images refs/img64_features.pkl --metric MIND --metric FID  --metric PrecisionRecall -o data/image_testing/pi_2/50NFE_churn_2/data --ref_statistics refs/img64_stats.pkl
 
-generate-images -n 5000 -o data/image_testing/edm/50NFE_pi_churn_2 edm --nfe 50 --S_churn 40 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv
+generate-images -n 5000 -o data/image_testing/edm/100NFE_pi_churn edm --nfe 100 --S_churn 40 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv
 
 generate-images -n 5000 -o data/image_testing/edm/50NFE_pi_ edm --nfe 50 --pi_discretisation data/image_testing/pi_2/50NFE_ode_1/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/50NFE_pi_2/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/50NFE_pi/data --ref_statistics refs/img64_stats.pkl
 
@@ -10,10 +10,15 @@ evaluate-images -b 512 eval-features data/image_testing/edm/50NFE_pi_churn/image
 --metric FID --metric PrecisionRecall
 generate-images -n 50000 -o data/image_testing/edm/75NFE_pi_churn edm --nfe 75 --S_churn 40 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/75NFE_pi_churn/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/75NFE_pi_churn/data --ref_statistics refs/img64_stats.pkl
 
-generate-images -n 5000 -o data/image_testing/edm/test/50NFE_pi_churn_low edm --nfe 50 --S_churn 60 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/test/50NFE_pi_churn_low/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/test/50NFE_pi_churn_low/data --ref_statistics refs/img64_stats.pkl
+generate-images -n 5000 -o data/image_testing/edm/test/50NFE_pi_churn_low_2 edm --nfe 50 --S_churn 60 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/test/50NFE_pi_churn_low/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/test/50NFE_pi_churn_low/data --ref_statistics refs/img64_stats.pkl
 generate-images -n 5000 -o data/image_testing/edm/test/50NFE_pi_churn_high edm --nfe 50 --S_churn 100 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/test/50NFE_pi_churn_high/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/test/50NFE_pi_churn_high/data --ref_statistics refs/img64_stats.pkl
 
-generate-images -n 50000 -o data/image_testing/ggf/50NFE ggf --tau_a 0.0078 --tau_r 24.5 --h_start 25 --r 0.1 --n_ode_steps 5
+
+evaluate-images -b 512 -n 50000 eval-features data/image_testing/heun/50NFE_pi/images refs/img64_features.pkl --metric MIND --metric FID --metric PrecisionRecall -o data/image_testing/heun/50NFE_pi/data --ref_statistics refs/img64_stats.pkl
+
+generate-images -n 50000 -o data/image_testing/heun/50NFE_2 em --nfe 50 --heun
+
+generate-images -n 50000 -o data/image_testing/edm/100NFE_churn edm --nfe 100 --S_churn 40 --S_min 0.05 --S_max 50 --S_noise 1.003
 
 Run everything at 25 NFE ODE
 Run everything at 100 NFE

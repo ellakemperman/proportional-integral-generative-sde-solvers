@@ -4,6 +4,7 @@ import os
 import math
 import argparse
 
+import scienceplots
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
@@ -105,6 +106,8 @@ def main():
                         help="Beta min for the VP SDE (default 0.1)")
     parser.add_argument("--beta_max", default=20, type=float,
                         help="Beta max for the VP SDE (default 20)")
+    parser.add_argument("--non_adaptive_ref", default=None, type=str,
+                        help="File with error and NFE for the Heun and EM solvers.")
 
     # PI Hyperparameters
     parser.add_argument("--max_iter", default=1000, type=int,
@@ -190,12 +193,15 @@ def main():
     pi_solvers = create_solvers(pi_constructor, pi_evaluation_range)
 
     # Evaluate
-    df = pd.DataFrame()
-    print("Evaluating Euler-Marayuma")
-    df["em_nfe"], df["em_error"] = evaluate_solvers(em_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+    if args.non_adaptive_ref is None:
+        df = pd.DataFrame()
+        print("Evaluating Euler-Marayuma")
+        df["em_nfe"], df["em_error"] = evaluate_solvers(em_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
 
-    print("Evaluating Heun")
-    df["heun_nfe"], df["heun_error"] = evaluate_solvers(heun_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+        print("Evaluating Heun")
+        df["heun_nfe"], df["heun_error"] = evaluate_solvers(heun_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+    else:
+        df = pd.read_csv(args.non_adaptive_ref)
 
     print("Evaluating PI")
     df["pi_nfe"], df["pi_error"] = evaluate_solvers(pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
@@ -207,13 +213,16 @@ def main():
 
     # Create plot
     plt.figure()
-    sns.scatterplot(df, x="em_nfe", y="em_error", label="Euler-Maruyuma")
-    sns.scatterplot(df, x="pi_nfe", y="pi_error", label="Proportional-integral")
+    plt.style.use("science")
+    sns.scatterplot(df, x="em_nfe", y="em_error", label="Euler-Maruyama")
     sns.scatterplot(df, x="heun_nfe", y="heun_error", label="Heun")
-    plt.xlabel("NFE")
+    sns.scatterplot(df, x="pi_nfe", y="pi_error", label="Proportional-integral")
+    plt.xlabel("NFE", fontsize=15)
     plt.xlim(0, args.nfe_max)
+    plt.xticks(fontsize=12)
     plt.yscale("log")
-    plt.ylabel(r"$D_W$")
+    plt.ylabel(r"$D_W$", fontsize=15)
+    plt.yticks(fontsize=12)
     plt.legend()
     plt.grid()
     plt.savefig(args.output + "/plot.png")

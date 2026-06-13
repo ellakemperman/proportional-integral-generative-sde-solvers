@@ -1,9 +1,13 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import scienceplots
 
 from pi_solvers.solver_lib import get_edm_schedule
 from pi_solvers.utils import compute_discretisation_interpolation
+
+
+plt.style.use("science")
 
 
 def detect_outliers(paths: np.ndarray, t_min: float = 0.05, n_outlier_steps: int = 15):
@@ -46,7 +50,7 @@ def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float 
     np.random.seed(seed)
     t_grid, means, stds, paths = get_paths(data_path, t_max, t_min, plot_res)
 
-    random_paths = paths[(0, 48), :]
+    random_paths = paths[np.random.randint(0, paths.shape[0], n_paths), :]
 
     # EDM discretisation
     discretisation = get_edm_schedule(plot_res, t_min=t_min)[:-1]
@@ -57,16 +61,16 @@ def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float 
     ax.fill_between(t_grid, means + stds, means -stds, alpha=0.1, color=color)
 
     # Plot random paths
-    for i in range(2):
+    for i in range(n_paths):
         ax.plot(t_grid, random_paths[i, :], label=f"Sample Path {i}", linewidth=1)
 
     plt.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Discretisation")
     ax.legend()
     plt.yscale("log")
     ax.set_xlim(0, 1)
-    ax.set_xlabel("fraction along SDE path")
+    ax.set_xlabel("Fraction along SDE path")
     ax.set_ylim(t_min, t_max)
-    ax.set_ylabel("sigma")
+    ax.set_ylabel(r"$\sigma$")
     ax.grid()
     return ax
 
@@ -90,7 +94,7 @@ def analyse_pi_gaussian_trajectories(ax, label: str, data_path: str, t_max: floa
     ax.set_xlim(0, 1)
     ax.set_xlabel("fraction along SDE path")
     ax.set_ylim(t_max, t_min)
-    ax.set_ylabel("t")
+    ax.set_ylabel(r"$t$")
     ax.grid()
     return ax
 
@@ -101,9 +105,10 @@ if __name__ == "__main__":
     t_max = 80
 
     fig = plt.figure()
+    fig.set_size_inches(6, 3.75)
     ax = fig.add_subplot(111)
 
-    generate_pi_image_trajectories(ax, data_path=data_path, label="50 NFE", t_min=t_min, t_max=t_max)
+    generate_pi_image_trajectories(ax, data_path=data_path, label="PI Average", t_min=t_min, t_max=t_max, n_paths=2)
 
     fig.show()
 

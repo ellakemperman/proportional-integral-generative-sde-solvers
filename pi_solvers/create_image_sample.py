@@ -14,7 +14,7 @@ def create_image_sample(image_path: str, save_path: str, n: int = 16, n_cols: in
         if i >= n - 1:
             break
     fig = plot_images(images, n_cols)
-    fig.tight_layout()
+    fig.tight_layout(pad=0)
     fig.savefig(save_path + "/samples.png")
     print(f"Image saved to {os.path.abspath(save_path + "/samples.png")}")
 
