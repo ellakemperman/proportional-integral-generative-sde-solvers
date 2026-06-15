@@ -104,7 +104,8 @@ def get_pi_schedule(
     ts[:, 0] = np.full(ts.shape[0], t_max)
 
     # Get average schedule from the mean of the interpolation of all paths
-    _, pi_interpolation = compute_discretisation_interpolation(ts, n_steps)
+    # Add one step as the last step is removed to not repeat a step from t_ode to t_ode
+    _, pi_interpolation = compute_discretisation_interpolation(ts, n_steps + 1)
     pi_schedule = pi_interpolation.mean(axis=0)
     pi_schedule = torch.tensor(pi_schedule)[:-1]
 
