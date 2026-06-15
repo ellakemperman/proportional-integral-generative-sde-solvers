@@ -93,22 +93,23 @@ def analyse_pi_gaussian_trajectories(ax, label: str, data_path: str, t_max: floa
     ax.legend()
     ax.set_xlim(0, 1)
     ax.set_xlabel("fraction along SDE path")
-    ax.set_ylim(t_max, t_min)
+    ax.set_ylim(t_min, t_max)
     ax.set_ylabel(r"$t$")
     ax.grid()
     return ax
 
 
 if __name__ == "__main__":
-    data_path = "../../data/image_testing/pi_2/75NFE_2/data"
+    data_path = "../../data/gaussian_test/simple_high_h_start"
     t_min = 0.05
     t_max = 80
 
     fig = plt.figure()
-    fig.set_size_inches(6, 3.75)
+    fig.set_size_inches(5, 3.75)
     ax = fig.add_subplot(111)
 
-    generate_pi_image_trajectories(ax, data_path=data_path, label="PI Average", t_min=t_min, t_max=t_max, n_paths=2)
+    # generate_pi_image_trajectories(ax, data_path=data_path, label="PI Average", t_min=t_min, t_max=t_max, n_paths=2)
+    analyse_pi_gaussian_trajectories(ax, data_path=data_path, label="PI Average", t_max=1, t_min=0, n_paths=3)
 
     fig.show()
 

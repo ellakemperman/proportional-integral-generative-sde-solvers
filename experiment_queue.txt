@@ -14,9 +14,9 @@ generate-images -n 5000 -o data/image_testing/edm/test/50NFE_pi_churn_low_2 edm 
 generate-images -n 5000 -o data/image_testing/edm/test/50NFE_pi_churn_high edm --nfe 50 --S_churn 100 --S_min 0.05 --S_max 50 --S_noise 1.003 --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv && evaluate-images -b 512 -n 5000 eval-features data/image_testing/edm/test/50NFE_pi_churn_high/images refs/img64_features.pkl --metric MIND -o data/image_testing/edm/test/50NFE_pi_churn_high/data --ref_statistics refs/img64_stats.pkl
 
 
-evaluate-images -b 512 -n 50000 eval-features data/image_testing/heun/50NFE_pi/images refs/img64_features.pkl --metric MIND --metric FID --metric PrecisionRecall -o data/image_testing/heun/50NFE_pi/data --ref_statistics refs/img64_stats.pkl
+evaluate-images -b 512 -n 50000 eval-features data/image_testing/heun/75NFE/images refs/img64_features.pkl --metric MIND --metric FID --metric PrecisionRecall -o data/image_testing/heun/75NFE/data --ref_statistics refs/img64_stats.pkl
 
-generate-images -n 50000 -o data/image_testing/heun/50NFE_2 em --nfe 50 --heun
+generate-images -n 50000 -o data/image_testing/heun/100NFE_pi em --nfe 100 --heun --pi_discretisation data/image_testing/pi_2/75NFE_2/data/_t.csv
 
 generate-images -n 50000 -o data/image_testing/edm/100NFE_churn edm --nfe 100 --S_churn 40 --S_min 0.05 --S_max 50 --S_noise 1.003
 

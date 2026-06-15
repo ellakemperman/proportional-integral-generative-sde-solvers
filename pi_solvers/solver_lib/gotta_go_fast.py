@@ -1,5 +1,6 @@
 """Adaptive solver based on Jolicoeur-Martineau et al. (2021)"""
 from typing import Callable
+
 import torch
 
 from pi_solvers.solver_lib.solvers import Solver
