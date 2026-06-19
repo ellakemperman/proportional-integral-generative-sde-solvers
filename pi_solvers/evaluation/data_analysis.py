@@ -68,7 +68,7 @@ def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float 
     ax.legend()
     plt.yscale("log")
     ax.set_xlim(0, 1)
-    ax.set_xlabel("Fraction along SDE path")
+    ax.set_xlabel(r"Fraction along SDE path $i/N$")
     ax.set_ylim(t_min, t_max)
     ax.set_ylabel(r"$\sigma$")
     ax.grid()
@@ -92,7 +92,7 @@ def analyse_pi_gaussian_trajectories(ax, label: str, data_path: str, t_max: floa
 
     ax.legend()
     ax.set_xlim(0, 1)
-    ax.set_xlabel("fraction along SDE path")
+    ax.set_xlabel(r"Fraction along SDE path $i/N$")
     ax.set_ylim(t_min, t_max)
     ax.set_ylabel(r"$t$")
     ax.grid()

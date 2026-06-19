@@ -4,12 +4,10 @@ import os
 import math
 import argparse
 
-import numpy as np
 import scienceplots
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
-import seaborn as sns
 import scipy.stats
 from scipy.signal import savgol_filter
 import tqdm
@@ -54,13 +52,13 @@ def create_solvers(
 
 def simple_gaussian(sde: sde_lib.LinearDriftSDE):
     n = 10
-    mus = torch.linspace(-n, n, n)
+    mus = lambda i: 2 * i - n
     sigmas = torch.zeros(n) + 0.3
     weights = torch.ones(n) / n
 
     gaussians_ = []
     for i in range(n):
-        gaussians_.append(gaussians.Gaussian(mu=mus[i], sigma=sigmas[i], weight=weights[i]))
+        gaussians_.append(gaussians.Gaussian(mu=mus(i), sigma=sigmas[i], weight=weights[i]))
 
     multi_gaussian = gaussians.MultiGaussian(tuple(gaussians_), sde)
     return multi_gaussian
@@ -237,9 +235,9 @@ def main():
     plt.figure()
     plt.style.use("science")
     plt.plot(df["em_nfe"], em_error_smooth, label="Euler-Maruyama")
-    plt.plot(df["heun_nfe"], heun_error_smooth, label="Heun")
+    plt.plot(df["heun_nfe"], heun_error_smooth, label="Stochastic Heun")
     if args.pi_discretisation_tau is not None:
-        plt.plot(df["heun_pi_nfe"], heun_pi_error_smooth, label="PI Static Heun")
+        plt.plot(df["heun_pi_nfe"], heun_pi_error_smooth, label="PI Static Stochastic Heun")
     plt.plot(df["pi_nfe"], pi_error_smooth, label="Proportional-integral")
     plt.xlabel("NFE", fontsize=15)
     plt.xlim(0, 200)
@@ -247,7 +245,7 @@ def main():
     plt.yscale("log")
     plt.ylabel(r"$D_W$", fontsize=15)
     plt.yticks(fontsize=12)
-    plt.legend()
+    plt.legend(fontsize=12)
     plt.grid()
     plt.savefig(args.output + "/plot.png")
 

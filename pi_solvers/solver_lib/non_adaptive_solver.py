@@ -34,7 +34,7 @@ class EulerMarayumaSolver(Solver):
             x += self.sde.step(x, t, dt, labels=labels)
 
             if callback is not None:
-                callback(x, t + dt)
+                callback(x=x, t=t + dt)
 
         return x
 
@@ -60,7 +60,7 @@ class HeunSolver(EulerMarayumaSolver):
                 x += dx_euler
 
             if callback is not None:
-                callback(x, t + dt)
+                callback(x=x, t=t + dt)
 
         return x
 

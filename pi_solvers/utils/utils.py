@@ -34,19 +34,21 @@ def load_edm_checkpoint(url: str) -> tuple[Callable[[torch.Tensor, torch.Tensor,
     return model, encoder
 
 
-def plot_images(images: list[str], n_cols: int) -> plt.Figure:
+def plot_images(images: list[str], n_cols: int, col_labels: tuple[int,...] = None) -> plt.Figure:
     # Plot images
     fig, axes = plt.subplots(len(images) // n_cols, n_cols)
-    fig.set_size_inches(10, 10)
+    fig.set_size_inches(3 * n_cols + 1, 3 * len(images) // n_cols + 1)
 
     for index, image_path in enumerate(images):
-        j = index % n_cols
-        k = index // n_cols
+        j = index // n_cols
+        k = index % n_cols
 
         image_arr = plt.imread(image_path)
 
         axes[j][k].imshow(image_arr)
         axes[j][k].axis("off")
+        if j == 0 and col_labels is not None:
+            axes[j][k].set_title(f"NFE = {col_labels[k]}", fontsize=20)
 
     fig.tight_layout()
     return fig

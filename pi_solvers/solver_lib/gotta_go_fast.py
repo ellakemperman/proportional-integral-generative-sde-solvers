@@ -118,7 +118,7 @@ class GottaGoFast(Solver):
             prev_w_full[not_finished] = prev_w
 
             if callback is not None:
-                callback(x_full, t_full, h_full, error)
+                callback(x=x_full, t=t_full, h=h_full, error=error)
             i += 1
 
         return x_full

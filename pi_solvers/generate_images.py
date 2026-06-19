@@ -214,6 +214,7 @@ def generate_edm_images(
     elif entropy_checkpoint is not None and pi_discretisation is None:
         discretisation = get_entropy_schedule((nfe + 1) // 2, entropy_checkpoint)
     elif entropy_checkpoint is None and pi_discretisation is not None:
+        nfe = nfe + 1
         n_steps = int((nfe * 0.8) // 2)
         n_ode_steps = nfe // 2 - n_steps
         print(n_steps + n_ode_steps)

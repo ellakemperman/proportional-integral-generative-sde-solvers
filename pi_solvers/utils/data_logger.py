@@ -74,3 +74,18 @@ class RejectCounter(DataLogger):
 
     def write(self):
         pass
+
+
+class LastTimeLogger(DataLogger):
+    def __init__(self):
+        self._t = -1
+
+    @property
+    def t(self):
+        return self._t
+
+    def __call__(self, t: torch.Tensor, *args, **kwargs):
+        self._t = t
+
+    def write(self):
+        pass
