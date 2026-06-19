@@ -4,16 +4,19 @@ import os
 import math
 import argparse
 
+import numpy as np
 import scienceplots
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.stats
+from scipy.signal import savgol_filter
 import tqdm
 
 from pi_solvers import solver_lib, sde_lib
-from pi_solvers.utils import gaussians, utils
+from pi_solvers.solver_lib import get_pi_schedule
+from pi_solvers.utils import gaussians, utils, data_logger
 
 
 def calculate_distance(x1: torch.Tensor, x2: torch.Tensor, n_bins=1000) -> float:
@@ -108,6 +111,8 @@ def main():
                         help="Beta max for the VP SDE (default 20)")
     parser.add_argument("--non_adaptive_ref", default=None, type=str,
                         help="File with error and NFE for the Heun and EM solvers.")
+    parser.add_argument("--pi_discretisation_tau", default=None, type=float,
+                        help="Absolute tolerance at which to generate the PI discretisation")
 
     # PI Hyperparameters
     parser.add_argument("--max_iter", default=1000, type=int,
@@ -164,8 +169,7 @@ def main():
     # Create solver iterables
     n_evaluation_points = args.resolution
 
-    em_evaluation_range = torch.round(
-        torch.exp(torch.linspace(math.log(args.nfe_min), math.log(args.nfe_max), n_evaluation_points)))
+    em_evaluation_range = torch.linspace(args.nfe_min, args.nfe_max, n_evaluation_points)
     em_constructor = lambda n_steps: solver_lib.EulerMarayumaSolver(reverse_sde, torch.linspace(1, 0, int(n_steps)), seed=args.seed)
     heun_constructor = lambda n_steps: solver_lib.HeunSolver(reverse_sde, torch.linspace(1, 0, int(n_steps) // 2))
 
@@ -207,18 +211,38 @@ def main():
     df["pi_nfe"], df["pi_error"] = evaluate_solvers(pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
     df["pi_tau"] = pi_evaluation_range
 
+    print("Evaluating Heun with PI discretisation")
+    if args.pi_discretisation_tau is not None:
+        solver = pi_constructor(args.pi_discretisation_tau)
+        callback = data_logger.PIDataLogger(args.output + "/", batch_size=args.n_samples, max_iter=args.max_iter)
+        solver.solve(x_start, callback=callback)
+        callback.write()
+
+        heun_pi_constructor = lambda n_steps: solver_lib.HeunSolver(reverse_sde, get_pi_schedule(n_steps=int(n_steps) // 2, n_ode_steps=0, pi_paths_file=args.output + "/_t.csv", t_max=1, t_min=0, t_ode=0))
+        heun_pi_solvers = create_solvers(heun_pi_constructor, em_evaluation_range)
+        df["heun_pi_nfe"], df["heun_pi_error"] = evaluate_solvers(heun_pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+
     # Write data
     print("Saving data, creating plots")
     df.to_csv(args.output + "/data.csv")
 
+    # Smooth distances
+    em_error_smooth = savgol_filter(df["em_error"], window_length=9, polyorder=3)
+    heun_error_smooth = savgol_filter(df["heun_error"], window_length=9, polyorder=3)
+    pi_error_smooth = savgol_filter(df["pi_error"], window_length=9, polyorder=3)
+    if args.pi_discretisation_tau is not None:
+        heun_pi_error_smooth = savgol_filter(df["heun_pi_error"], window_length=9, polyorder=3)
+
     # Create plot
     plt.figure()
     plt.style.use("science")
-    sns.scatterplot(df, x="em_nfe", y="em_error", label="Euler-Maruyama")
-    sns.scatterplot(df, x="heun_nfe", y="heun_error", label="Heun")
-    sns.scatterplot(df, x="pi_nfe", y="pi_error", label="Proportional-integral")
+    plt.plot(df["em_nfe"], em_error_smooth, label="Euler-Maruyama")
+    plt.plot(df["heun_nfe"], heun_error_smooth, label="Heun")
+    if args.pi_discretisation_tau is not None:
+        plt.plot(df["heun_pi_nfe"], heun_pi_error_smooth, label="PI Static Heun")
+    plt.plot(df["pi_nfe"], pi_error_smooth, label="Proportional-integral")
     plt.xlabel("NFE", fontsize=15)
-    plt.xlim(0, args.nfe_max)
+    plt.xlim(0, 200)
     plt.xticks(fontsize=12)
     plt.yscale("log")
     plt.ylabel(r"$D_W$", fontsize=15)

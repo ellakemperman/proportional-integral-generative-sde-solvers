@@ -126,6 +126,7 @@ class EDMSolver(Solver):
 
     def __init__(
             self,
+            sde: SDE,
             discretisation: torch.Tensor,
             model: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor],
             g_model: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor] = None,
@@ -151,7 +152,7 @@ class EDMSolver(Solver):
         :param S_noise: How much noise should be added when churn.
         :param dtype: Dtype of all tensors.
         """
-        super().__init__(EDMSDE(), seed=seed)
+        super().__init__(sde, seed=seed)
         self._discretisation = discretisation
         self._model = model
         self._g_model = g_model
@@ -179,11 +180,13 @@ class EDMSolver(Solver):
                 x_hat = x_cur
 
             # Euler step.
+            self.sde.dummy_call(x_cur)
             d_cur = (x_hat - self.denoise(x_hat, t_hat, labels)) / t_hat
             x_next = x_hat + (t_next - t_hat) * d_cur
 
             # Apply 2nd order correction.
             if i < n_steps - 1:
+                self.sde.dummy_call(x_cur)
                 d_prime = (x_next - self.denoise(x_next, t_next, labels)) / t_next
                 x_next = x_hat + (t_next - t_hat) * (0.5 * d_cur + 0.5 * d_prime)
 

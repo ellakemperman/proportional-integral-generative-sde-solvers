@@ -221,7 +221,7 @@ def generate_edm_images(
     else:
         raise ValueError("Only one of pi_discretisation and entropy_checkpoint should be set.")
 
-    solver_constructor = lambda _, model: EDMSolver(model=model, discretisation=discretisation, seed=seed, **edm_kwargs)
+    solver_constructor = lambda sde, model: EDMSolver(sde=sde, model=model, discretisation=discretisation, seed=seed, **edm_kwargs)
     generate_images(
         solver_func=solver_constructor,
         outdir=image_path,

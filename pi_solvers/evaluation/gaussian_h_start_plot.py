@@ -1,6 +1,6 @@
 import scienceplots
 import matplotlib.pyplot as plt
-import seaborn as sns
+from scipy.signal import savgol_filter
 import pandas as pd
 import numpy as np
 
@@ -16,7 +16,7 @@ if __name__ == "__main__":
         data = pd.read_csv(path + "/" + str(h) + "/data.csv")
         x = data["pi_nfe"]
         y = data["pi_error"]
-        y = np.convolve(y, np.array([0.25, 0.5, 1, 0.5, 0.25]))[2:-2]
+        y = savgol_filter(y, window_length=9, polyorder=3)
 
         plt.plot(x, y, label=fr"$h_0={h}$", linewidth=1.5)
 

@@ -39,6 +39,14 @@ class SDE(ABC):
         self._nfe = 0
         self._ode = self.__original_ode
 
+    def dummy_call(self, x):
+        """
+        Dummy call for counting NFE
+
+        :param x: The given sample, a tensor of shape (batch_size, d)
+        """
+        self._nfe += x.shape[0]
+
     def sde(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the Ito parameters of the SDE for a given sample and time. The SDE is defined by the drift f(t) and

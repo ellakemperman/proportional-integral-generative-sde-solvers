@@ -100,7 +100,7 @@ def analyse_pi_gaussian_trajectories(ax, label: str, data_path: str, t_max: floa
 
 
 if __name__ == "__main__":
-    data_path = "../../data/gaussian_test/simple_high_h_start"
+    data_path = "../../data/gaussian_test/simple_final"
     t_min = 0.05
     t_max = 80
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     fig.set_size_inches(5, 3.75)
     ax = fig.add_subplot(111)
 
-    # generate_pi_image_trajectories(ax, data_path=data_path, label="PI Average", t_min=t_min, t_max=t_max, n_paths=2)
+    # generate_pi_image_trajectories(ax, data_path=data_path  , label="PI Average", t_min=t_min, t_max=t_max, n_paths=2)
     analyse_pi_gaussian_trajectories(ax, data_path=data_path, label="PI Average", t_max=1, t_min=0, n_paths=3)
 
     fig.show()
