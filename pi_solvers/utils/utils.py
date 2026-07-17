@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torchvision.io import decode_image
+from typer import Typer
 
 from pi_solvers import dnnlib
 
@@ -44,9 +45,12 @@ def plot_images(images: list[str], n_cols: int, col_labels: tuple[int,...] = Non
         k = index % n_cols
 
         image_arr = plt.imread(image_path)
-
-        axes[j][k].imshow(image_arr)
-        axes[j][k].axis("off")
+        try:
+            axes[j][k].imshow(image_arr)
+            axes[j][k].axis("off")
+        except TypeError:
+            axes[k].imshow(image_arr)
+            axes[k].axis("off")
         if j == 0 and col_labels is not None:
             axes[j][k].set_title(f"NFE = {col_labels[k]}", fontsize=20)
 

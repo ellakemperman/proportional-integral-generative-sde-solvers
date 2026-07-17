@@ -72,3 +72,65 @@ class VarianceExplodingEDMSDE(VarianceExplodingSDE):
             return (denoiser(x, sigma, labels) - x) / torch.square(sigma)
 
         return super().get_reverse_sde(score_fn, ode_threshold)
+
+
+def construct_churn_sde(
+        denoiser: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor],
+        N: int,
+        S_churn: float = 40,
+        S_min: float = 0.05,
+        S_max: float = 50,
+        ode: bool = False,
+        seed: int = 0
+):
+    class ChurnSDE(LinearDriftSDE):
+
+        def __init__(self):
+            super().__init__(ode, seed)
+            self._h = None
+
+        @staticmethod
+        def _score_fn(x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
+            d = denoiser(x, t, labels)
+            return (d - x) / torch.square(t)
+
+        @staticmethod
+        def _gamma(t: torch.Tensor):
+            gamma = min(S_churn / N, math.sqrt(2) - 1)
+            return gamma * (torch.logical_and(t < S_max, t > S_min))
+
+        def _lambda(self, t: torch.Tensor):
+            if self._h is None:
+                raise RuntimeError("Step size not defined in lambda call, likely because of wrong use of ChurnSDE")
+            return self._gamma(t) * t / torch.abs(self._h)
+
+        def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
+            return - (1 + self._lambda(t)) * t * self._score_fn(x, t, labels)
+
+        def diffusion(self, t: torch.Tensor) -> torch.Tensor:
+            return torch.sqrt(2 * self._lambda(t) * t)
+
+        def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+            return torch.ones(x.shape).to(self._device)
+
+        def sigma(self, t: torch.Tensor) -> torch.Tensor:
+            return t
+
+        def step(self,
+             x: torch.tensor,
+             t: torch.tensor,
+             dt: torch.tensor,
+             w: torch.Tensor = None,
+             labels: torch.Tensor = None
+             ) -> torch.Tensor:
+            self._h = dt.clone()
+            return super().step(x, t, dt, w, labels)
+
+        def get_reverse_sde(
+                self,
+                score_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor],
+                ode_threshold: float = 0
+        ) -> 'LinearDriftSDE':
+            raise NotImplementedError("Please do not reverse this already reversed SDE.")
+
+    return ChurnSDE()

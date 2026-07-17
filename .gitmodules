@@ -1,0 +1,3 @@
+[submodule "BitstreamDiffusion"]
+	path = BitstreamDiffusion
+	url = git@github.com:GBATZOLIS/BitstreamDiffusion.git
