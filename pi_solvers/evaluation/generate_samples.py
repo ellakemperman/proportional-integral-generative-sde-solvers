@@ -49,14 +49,21 @@ def generate_images(
         # Get noise and labels
         rng = utils.StackedRandomGenerator(device, batch_seeds)
         noise = rng.randn((batch_size, model.img_channels, model.img_resolution, model.img_resolution), device=device) * 80
-        labels = torch.eye(model.label_dim, device=device)[rng.randint(model.label_dim, size=[len(batch_seeds)], device=device)]
+        if model.label_dim > 0:
+            labels = torch.eye(model.label_dim, device=device)[
+                rng.randint(model.label_dim, size=[len(batch_seeds)], device=device)]
+        else:
+            labels = None
 
         # Sample using generated noise
         images = solver.solve(noise, labels, callback)
 
         # Save images
+        if labels is None:
+            labels = torch.zeros(batch_size)
         for seed, image, label in zip(batch_seeds, encoder.decode(images).permute(0, 2, 3, 1).cpu().numpy(), labels):
-            label = torch.argmax(label)
+            if labels is not None:
+                label = torch.argmax(label)
             PIL.Image.fromarray(image, "RGB").save(os.path.join(outdir, f"{seed:06d}-{label}.png"))
 
         if callback is not None:
