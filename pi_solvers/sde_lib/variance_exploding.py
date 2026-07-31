@@ -105,10 +105,12 @@ def construct_churn_sde(
             return self._gamma(t) * t / torch.abs(self._h)
 
         def drift(self, x: torch.Tensor, t: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
-            return - (1 + self._lambda(t)) * t * self._score_fn(x, t, labels)
+            lambda_drift = ((self._gamma(t) + self._gamma(t)**2) * t) / self._h + self._gamma(t)
+            return - (1 + lambda_drift) * t * self._score_fn(x, t, labels)
 
         def diffusion(self, t: torch.Tensor) -> torch.Tensor:
-            return torch.sqrt(2 * self._lambda(t) * t)
+            lambda_noise = (self._gamma(t) + self._gamma(t)**2 / 2) * t / self._h
+            return torch.sqrt(2 * lambda_noise * t)
 
         def mu(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
             return torch.ones(x.shape).to(self._device)
@@ -123,7 +125,7 @@ def construct_churn_sde(
              w: torch.Tensor = None,
              labels: torch.Tensor = None
              ) -> torch.Tensor:
-            self._h = dt.clone()
+            self._h = torch.abs(dt.clone())
             return super().step(x, t, dt, w, labels)
 
         def get_reverse_sde(

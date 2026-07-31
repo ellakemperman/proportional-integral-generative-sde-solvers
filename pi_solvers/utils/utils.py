@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torchvision.io import decode_image
-from typer import Typer
 
 from pi_solvers import dnnlib
 
