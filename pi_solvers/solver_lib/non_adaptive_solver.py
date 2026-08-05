@@ -30,7 +30,7 @@ class EulerMarayumaSolver(Solver):
     def solve(self, x: torch.tensor, labels: torch.Tensor = None,
               callback: Callable[[torch.Tensor, torch.Tensor], None] = None) -> torch.tensor:
         for i, dt in enumerate(self._time_steps):
-            t = broadcast_vector((self._discretisation[i] * torch.ones(x.shape[0])).to(self._device), x)
+            t = broadcast_vector((self._discretisation[i] * torch.ones(x.shape[0]).to(self._device)), x)
             x += self.sde.step(x, t, dt, labels=labels)
 
             if callback is not None:
@@ -181,12 +181,14 @@ class EDMSolver(Solver):
 
             # Euler step.
             self.sde.dummy_call(x_cur)
+            t_hat = broadcast_vector(t_hat * torch.ones(x_hat.shape[0]).to(self._device), x_hat)
             d_cur = (x_hat - self.denoise(x_hat, t_hat, labels)) / t_hat
             x_next = x_hat + (t_next - t_hat) * d_cur
 
             # Apply 2nd order correction.
             if i < n_steps - 1:
                 self.sde.dummy_call(x_cur)
+                t_next = broadcast_vector(t_next * torch.ones(x_hat.shape[0]).to(self._device), x_hat)
                 d_prime = (x_next - self.denoise(x_next, t_next, labels)) / t_next
                 x_next = x_hat + (t_next - t_hat) * (0.5 * d_cur + 0.5 * d_prime)
 
@@ -202,5 +204,4 @@ class EDMSolver(Solver):
     def to(self, device):
         super().to(device)
         self._discretisation =  self._discretisation.to(device)
-        self._model = self._model.to(device)
         return self
