@@ -8,6 +8,7 @@ import torch
 from torchvision.io import decode_image
 
 from pi_solvers import dnnlib
+from pi_solvers.torch_utils.dataset import ImageFolderDataset
 
 
 # From EDM2
@@ -127,12 +128,23 @@ def compute_discretisation_interpolation(
 class ImageSampleDataset(torch.utils.data.Dataset):
 
     def __init__(self, image_dir: str, n_images: int = 0, transform = None):
-        self._images = list(pathlib.Path(image_dir).iterdir())
+        self._images = self.parse_dirs(pathlib.Path(image_dir))
+
         if n_images:
             self._images = self._images[:n_images]
 
         self._n_images = n_images
         self._transform = transform
+
+    @staticmethod
+    def parse_dirs(file_iterable):
+        flattened = []
+        for file in file_iterable.iterdir():
+            if file.is_dir():
+                flattened.extend(ImageSampleDataset.parse_dirs(file))
+            else:
+                flattened.append(file)
+        return flattened
 
     def __len__(self):
         return len(self._images)

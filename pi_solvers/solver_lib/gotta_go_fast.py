@@ -65,7 +65,7 @@ class GottaGoFast(Solver):
         error = torch.zeros(x.shape[0]).to(self._device)
         end_condition = broadcast_vector(torch.full((x.shape[0],), self._end_time), x).to(self._device)
         if labels is None:
-            labels = torch.zeros(x.shape[0], )
+            labels = torch.zeros(x.shape[0],).to(self._device)
         x_full, t_full, h_full = x, t, h
         i = 0
 
