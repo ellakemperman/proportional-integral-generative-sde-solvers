@@ -2,6 +2,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import scienceplots
+import torch
+
+from BitstreamDiffusion.diffusion.continuous.samplers import SigmaSchedule
+from BitstreamDiffusion.diffusion.continuous.processes import ContinuousForwardProcess
+from BitstreamDiffusion.evaluation.utils import load_config
 
 from pi_solvers.solver_lib import get_edm_schedule
 from pi_solvers.utils import compute_discretisation_interpolation
@@ -25,8 +30,10 @@ def detect_outliers(paths: np.ndarray, t_min: float = 0.05, n_outlier_steps: int
 
         lengths.append(path.shape[0])
 
-    plt.figure()
+    plt.figure(figsize=(5, 3.75))
     plt.hist(lengths)
+    plt.ylabel("Count")
+    plt.xlabel("Number of steps taken")
     plt.show()
 
 
@@ -64,7 +71,7 @@ def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float 
     for i in range(n_paths):
         ax.plot(t_grid, random_paths[i, :], label=f"Sample Path {i}", linewidth=1)
 
-    plt.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Discretisation")
+    # plt.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Discretisation")
     ax.legend()
     plt.yscale("log")
     ax.set_xlim(0, 1)
@@ -100,16 +107,32 @@ def analyse_pi_gaussian_trajectories(ax, label: str, data_path: str, t_max: floa
 
 
 if __name__ == "__main__":
-    data_path = "../../data/gaussian_test/simple_final"
+    data_path = "../../data/image_testing/pi_2/75NFE_2/data"
     t_min = 0.05
     t_max = 80
 
     fig = plt.figure()
     fig.set_size_inches(5, 3.75)
     ax = fig.add_subplot(111)
+    discretisation = get_edm_schedule(200, t_min=t_min)[:-1]
+    ax.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Discretisation", c="y")
+    generate_pi_image_trajectories(ax, data_path=data_path  , label="PI ImageNet-64", t_min=t_min, t_max=t_max, n_paths=0, color="r")
+    generate_pi_image_trajectories(ax, data_path="../../data/image_testing/pi/Cluster/ffhq_test/data", label="PI FFHQ", t_min=t_min, t_max=t_max, n_paths=0, color="g")
+    generate_pi_image_trajectories(ax, data_path="../../data/image_testing/pi/Cluster/cifar_test/data", label="PI CIFAR-10)", t_min=t_min, t_max=t_max, n_paths=0, color="b")
+    # analyse_pi_gaussian_trajectories(ax, data_path=data_path, label="PI Average", t_max=1, t_min=0, n_paths=3)
 
-    # generate_pi_image_trajectories(ax, data_path=data_path  , label="PI Average", t_min=t_min, t_max=t_max, n_paths=2)
-    analyse_pi_gaussian_trajectories(ax, data_path=data_path, label="PI Average", t_max=1, t_min=0, n_paths=3)
+    # cfg = load_config("../../BitstreamDiffusion/configs/lm1b/continuous/eval/rate_eval_seeds.py")
+
+    """    sigmas = SigmaSchedule(ContinuousForwardProcess(cfg), cfg, torch.device("cpu"))
+    sigmas_ = sigmas.prepare(
+        schedule="entropic",
+        num_steps=200,
+        entropy_run_dir="../../BitstreamDiffusion/assets/entropy_tables/lm1b",
+    )
+
+    linear = torch.linspace(0, 1, sigmas_.shape[0])
+    ax.plot(linear, sigmas_, label="Entropy")
+    ax.legend()"""
 
     fig.show()
 

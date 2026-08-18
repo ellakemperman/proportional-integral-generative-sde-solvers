@@ -68,3 +68,44 @@ class LinearVariancePreservingSDE(VariancePreservingSDE):
 
     def _B(self, t: torch.Tensor) -> torch.Tensor:
         return self._beta_min * t + 0.5 * torch.square(t) * (self._beta_max - self._beta_min)
+
+
+class StableDiffusionVPSDE(VariancePreservingSDE):
+
+    def __init__(
+            self,
+            beta_min: float = 0.00085,
+            beta_max : float = 0.012,
+            interval: tuple[int, int] = (0, 999),
+            ode: bool = False,
+            seed: int = 0
+    ):
+        super().__init__(ode=ode, seed=seed)
+        self._beta_min = beta_min
+        self._beta_max = beta_max
+        self._interval = interval
+        self._n = interval[1] - interval[0] + 1
+
+        self._betas = torch.linspace(0.00085 ** 0.5, 0.012 ** 0.5, self._n, dtype=torch.float32) ** 2
+        alphas = 1.0 - self._betas
+        self._alpha_bar = torch.cumprod(alphas, dim=0)  # index 0..999
+
+    def get_index_from_t(self, t):
+        rounded = torch.round(t)
+        return torch.clamp(rounded, min=self._interval[0] * torch.ones_like(t), max=self._interval[1] * torch.ones_like(t)).to(torch.int)
+
+    def _beta(self, t: torch.Tensor) -> torch.Tensor:
+        index = self.get_index_from_t(t)
+        return self._betas[index]
+
+    def _B(self, t: torch.Tensor) -> torch.Tensor:
+        pass
+
+    def sigma(self, t: torch.Tensor) -> torch.Tensor:
+        index = self.get_index_from_t(t)
+        return torch.sqrt(1 - self._alpha_bar[index])
+
+    def to(self, device: str) -> 'SDE':
+        self._betas = self._betas.to(device)
+        self._alpha_bar = self._alpha_bar.to(device)
+        return super().to(device)
