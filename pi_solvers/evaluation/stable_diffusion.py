@@ -51,15 +51,14 @@ class StableDiffusionModel:
         index = self._sde.get_index_from_t(t).reshape(-1)
 
         # Concatenate for CFG
-        x_in = torch.cat([x, x], dim=0).to(torch.float32)
-        embeds = torch.cat([self._negative_embeddings, self._embeddings], dim=0)
+        x_in = x.to(torch.float32)
 
         # Forward calls
         with torch.no_grad():
-            noise_pred = self._unet(x_in, index, encoder_hidden_states=embeds).sample
+            unconditional_noise = self._unet(x_in, index, encoder_hidden_states=self._negative_embeddings.expand((x.shape[0]), -1, -1)).sample
+            conditional_noise = self._unet(x_in, index, encoder_hidden_states=self._embeddings.expand((x.shape[0]), -1, -1)).sample
 
         # Handle CFG
-        unconditional_noise, conditional_noise = noise_pred.chunk(2)
         epsilon = unconditional_noise + self._guidance_scale * (conditional_noise - unconditional_noise)
         return (- epsilon / self._sde.sigma(t)).to(torch.float)
 
@@ -118,11 +117,12 @@ def sample_sd(
     print(x.shape)
     x_solved = solver.solve(x, callback=pi_callback)
     print(f"nfe: {rsde.nfe / batch_size}")
+    nfe = rsde.nfe / batch_size
     images = model.decode(x_solved)
     print(images.shape)
 
     for i, image in enumerate(images):
-        PIL.Image.fromarray(image, "RGB").save(os.path.join(outdir, f"{i}.png"))
+        PIL.Image.fromarray(image, "RGB").save(os.path.join(outdir, f"{nfe}NFE_{prompt[:50]}_{i}.png"))
 
 
 if __name__ == "__main__":
@@ -134,10 +134,10 @@ if __name__ == "__main__":
         n_ode_steps=10,
         ki=0.3,
         kp=0.1,
-        tau_a=0.06,
-        tau_r=2,
+        tau_a=1,
+        tau_r=0,
         alpha=0.9,
-        h_start=10,
+        h_start=30,
         max_decrease=0.02,
         max_increase=5,
         interval=(999, 0),
@@ -146,10 +146,11 @@ if __name__ == "__main__":
     )
 
     sample_sd(
-        "god smiting a tiny mortal city to ashes",
+        "white",
         solver_func=solver_constructor,
         outdir="../../data/sd/test/",
         guidance_scale=7.5,
         ode=False,
-        batch_size=1,
+        batch_size=8,
+        negative_prompt=""
     )

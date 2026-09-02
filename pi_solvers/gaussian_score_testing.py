@@ -16,6 +16,7 @@ from pi_solvers import solver_lib, sde_lib
 from pi_solvers.solver_lib import get_pi_schedule
 from pi_solvers.utils import gaussians, utils, data_logger
 
+plt.style.use("science")
 
 def calculate_distance(x1: torch.Tensor, x2: torch.Tensor, n_bins=1000) -> float:
     bin_min, bin_max = torch.min(x1[0], x2[0]), torch.max(x1[-1], x2[-1])
@@ -206,19 +207,19 @@ def main():
         df = pd.read_csv(args.non_adaptive_ref)
 
     print("Evaluating PI")
-    df["pi_nfe"], df["pi_error"] = evaluate_solvers(pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
-    df["pi_tau"] = pi_evaluation_range
+    # df["pi_nfe"], df["pi_error"] = evaluate_solvers(pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+    # df["pi_tau"] = pi_evaluation_range
 
-    print("Evaluating Heun with PI discretisation")
-    if args.pi_discretisation_tau is not None:
-        solver = pi_constructor(args.pi_discretisation_tau)
-        callback = data_logger.PIDataLogger(args.output + "/", batch_size=args.n_samples, max_iter=args.max_iter)
-        solver.solve(x_start, callback=callback)
-        callback.write()
+    # print("Evaluating Heun with PI discretisation")
+    # if args.pi_discretisation_tau is not None:
+    #     solver = pi_constructor(args.pi_discretisation_tau)
+    #     callback = data_logger.PIDataLogger(args.output + "/", batch_size=args.n_samples, max_iter=args.max_iter)
+    #     solver.solve(x_start, callback=callback)
+    #     callback.write()
 
-        heun_pi_constructor = lambda n_steps: solver_lib.HeunSolver(reverse_sde, get_pi_schedule(n_steps=int(n_steps) // 2, n_ode_steps=0, pi_paths_file=args.output + "/_t.csv", t_max=1, t_min=0, t_ode=0))
-        heun_pi_solvers = create_solvers(heun_pi_constructor, em_evaluation_range)
-        df["heun_pi_nfe"], df["heun_pi_error"] = evaluate_solvers(heun_pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+    #     heun_pi_constructor = lambda n_steps: solver_lib.HeunSolver(reverse_sde, get_pi_schedule(n_steps=int(n_steps) // 2, n_ode_steps=0, pi_paths_file=args.output + "/_t.csv", t_max=1, t_min=0, t_ode=0))
+    #     heun_pi_solvers = create_solvers(heun_pi_constructor, em_evaluation_range)
+    #     df["heun_pi_nfe"], df["heun_pi_error"] = evaluate_solvers(heun_pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
 
     # Write data
     print("Saving data, creating plots")
@@ -232,8 +233,8 @@ def main():
         heun_pi_error_smooth = savgol_filter(df["heun_pi_error"], window_length=9, polyorder=3)
 
     # Create plot
-    plt.figure()
-    plt.style.use("science")
+    fig = plt.figure(dpi=300)
+    fig.set_size_inches(5, 3.75)
     plt.plot(df["em_nfe"], em_error_smooth, label="Euler-Maruyama")
     plt.plot(df["heun_nfe"], heun_error_smooth, label="Stochastic Heun")
     if args.pi_discretisation_tau is not None:

@@ -105,11 +105,14 @@ def get_pi_schedule(
 
     # Get average schedule from the mean of the interpolation of all paths
     # Add one step as the last step is removed to not repeat a step from t_ode to t_ode
-    _, pi_interpolation = compute_discretisation_interpolation(ts, n_steps + 1)
+    _, pi_interpolation = compute_discretisation_interpolation(ts, n_steps + 1, t_min=t_min)
     pi_schedule = pi_interpolation.mean(axis=0)
-    pi_schedule = torch.tensor(pi_schedule)[:-1]
+
+    if t_ode == t_max:
+        return torch.cat([pi_schedule, 0])
 
     # Add EDM schedule for the last few steps
+    pi_schedule = torch.tensor(pi_schedule)[:-1]
     edm_end = get_edm_schedule(n_ode_steps, t_min, t_ode)
 
     return torch.cat([pi_schedule, edm_end])

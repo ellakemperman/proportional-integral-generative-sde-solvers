@@ -140,7 +140,7 @@ gaussian-testing -h
 An example use case is:
 ```bash
 # Run Gaussian tests on a complex Gaussian
-gaussian-testing 10 200 0.05 5 -g "complex" -o "data/gaussian_testing/complex" --h_start 0.15
+gaussian-testing 10 200 0.05 5 -g "complex" -o "data/gaussian_testing/complex_final_neurips" --h_start 0.15 --non_adaptive_ref data/gaussian_test/comples_final/data.csv
 ```
 This runs the Heun and Euler-Maruyama solver from 10 to 200 NFE, and the PI solver from $\tau_{abs}=0.05$ 
 to $\tau_{abs}=5$, on a complex Gaussian.
