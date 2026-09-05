@@ -118,11 +118,11 @@ def generate_em_images(
         ode: bool,
         exist_okay: bool,
         nfe: int,
-        rho: float,
-        entropy_checkpoint: str,
-        pi_discretisation: str,
-        heun: bool,
         ode_threshold: float,
+        rho: float = 7,
+        entropy_checkpoint: str = None,
+        pi_discretisation: str = None,
+        heun: bool = False,
         **kwargs
 ):
     print(f"Setting up EM-solver for {n_images} images...")
@@ -186,9 +186,9 @@ def generate_edm_images(
         ode: bool,
         exist_okay: bool,
         nfe: int,
-        rho: float,
-        entropy_checkpoint: str,
-        pi_discretisation: str,
+        rho: float = 7,
+        entropy_checkpoint: str = None,
+        pi_discretisation: str = None,
         **edm_kwargs
 ):
     print(f"Setting up EDM-solver for {n_images} images...")

@@ -120,11 +120,11 @@ if __name__ == "__main__":
 
     fig = plt.figure(dpi=300)
     # creating a dictionary
-    font = {'size': 12}
+    font = {'size': 12, 'weight': "bold"}
 
     # using rc function
     plt.rc('font', **font)
-    fig.set_size_inches(7, 3.75)
+    fig.set_size_inches(5, 3.75)
     ax = fig.add_subplot(111)
     discretisation = get_edm_schedule(200, t_min=t_min)[:-1]
     ax.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Schedule", c="y")

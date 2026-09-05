@@ -81,18 +81,21 @@ def eval_features(
         print("Loading reference statistics...")
         stats = torch.load(ref_statistics, weights_only=False)
 
+    vals = []
+
     print("Calculating metrics...")
     for m in metric:
         ref = stats if m.uses_stats() else x
         print(f"Calculating {m}")
         data = m.pretty_print(ref, x_hat)
         print(data)
-
+        vals.append(data)
         if output:
             with open(output + "/metrics.txt", "a") as f:
                 f.write(data + "\n")
 
     print("Finished")
+    return vals
 
 
 def main():
