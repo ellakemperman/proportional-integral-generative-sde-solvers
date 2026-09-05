@@ -1,16 +1,16 @@
-# Proportional-Integral Time-Step Adaptive Solvers in Diffusion
+# Adaptive Second-Order Solvers for Generative Diffusion Sampling
+## By anonymous authors
 This is the implementation of the thesis: Proportional-Integral Time-Step Adaptive Solvers in Diffusion, which implements an adaptive diffusion sampler
 using Proportional Integral (PI) control based on an adaptive solver by [Ilie et al (2015)](https://link.springer.com/article/10.1007/s11075-014-9872-6). 
 This repository also contains an implementation of extracting average discretisations from the PI controlled adaptive solver.
 Furthermore, this repository has an implementation of several other diffusion samplers, including Euler-Maruyama, Stochastic Heun, the adaptive solver by
-[Jolicoeur-Martineau et al (2021)](https://arxiv.org/abs/2105.14080), and the EDM solver [(Karras et al, 2022)](https://arxiv.org/abs/2206.00364).
+[Jolicoeur-Martineau et al (2021)](https://arxiv.org/abs/2105.14080), and the EDM solver [(Karras et al, 2022)](https://arxiv.org/abs/2206.00364). We also
+adapt our solver to work with [BitstreamDiffusion](https://arxiv.org/abs/2605.07013), therefore, a fork of this repository is attached, that adds compatibility
+with our sampler and schedule generation methods.
+
+![ImageNet-64_samples](assets/ablations.png)
 
 ## Installation
-First, clone the repository using
-```bash
-# Clone the repository
-git clone git@github.com:ellakemperman/proportional-integral-generative-sde-solvers.git
-```
 Ensure your Python version is 3.12. Then, install pytorch 2.10.0 using the installation instructions provided [here](https://pytorch.org/get-started/locally/).
 Preferably, install for CUDA, as otherwise sampling is slow.
 
@@ -24,10 +24,13 @@ Finally, to allow easy usage of the command line tool, run
 # Install repository as a package
 pip install -e .
 ```
+### BitstreamDiffusion installation
+To run the language experiments, follow the installation instructions in the `BitstreamDiffusion/README.md` file (Step 1 and Step 2).
 
-## ImageNet-64 Ref files
-To be able to compute metrics for the ImageNet-64 dataset, please download the following two reference files
-from https://huggingface.co/datasets/ellakemperman/ImageNet64-features. Alternatively, these files can be reproduced
+## Ref files
+### ImageNet-64 Ref files
+To be able to compute metrics for the ImageNet-64 dataset, please download the following ImageNet-64 reference files
+from https://anonymous-hf.com/a/yx1cozswnfwp/. Alternatively, these files can be reproduced
 as well. The method Karras et al (2024) use in [this](https://github.com/NVlabs/edm2) repository is used. First,
 download the ImageNet dataset from [Kaggle](https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data)
 and extract it to a folder (e.g. documents/imagenet).
@@ -42,14 +45,74 @@ This converts the dataset to 64x64 resolution.
 Then, run
 ```bash
 # Detect features on ImageNet-64
-evaluate-images -b 512 gen-features datasets/img64 -o refs/img64_feautures.pkl --statistics_out img64_stats.pkl
+evaluate-images -b 512 gen-features datasets/img64 -o refs/img64_feautures.pkl --statistics_out refs/img64_stats.pkl
 ```
 This computes the necessary feature vectors and puts them in the `refs` folder.
 
+### FFHQ Ref files
+To be able to compute metrics for the FFHQ dataset, please download the following FFHQ reference files
+from https://anonymous-hf.com/a/yx1cozswnfwp/. Alternatively, these files can be reproduced
+as well. The method Karras et al (2024) use in [this](https://github.com/NVlabs/edm) repository is used. First,
+download the FFHQ dataset from [here](https://github.com/NVlabs/ffhq-dataset)
+and extract it to a folder (e.g. documents/ffhq).
+Then  run the command:
+```bash
+# Convert ImageNet images to 64x64
+python dataset_tool.py convert --source=documents/ffhq \
+    --dest=datasets/ffhq_64 --resolution=64x64
+```
+This converts the dataset to 64x64 resolution.
+
+Then, run
+```bash
+# Detect features on ImageNet-64
+evaluate-images -b 512 gen-features datasets/ffhq -o refs/ffhq_feautures.pkl --statistics_out refs/ffhq_stats.pkl
+```
+This computes the necessary feature vectors and puts them in the `refs` folder.
 
 ## Usage
 This repository provides a series of command line tools for easy use. Each has an extensive help menu for exact usage. Each 
-provided command is listed below with its basic usage explained and a usage example
+provided command is listed below with its basic usage explained and a usage example. Additionally, we provide a command
+to reproduce the main tables.
+
+### Reproducing the Tables
+#### FFHQ
+To reproduce the FFHQ (Table 1) results, run
+```bash
+# FID-NFE sweeps over multiple sampler-schedule configurations
+nfe-sweep pi_solvers/configs/ffhq_config.py
+```
+This will then output the generated images and results to `data/ffhq`
+
+#### ImageNet-64
+To reproduce the ImageNet-64 (Table 1) results, run
+```bash
+# FID-NFE sweeps over multiple sampler-schedule configurations
+nfe-sweep pi_solvers/configs/img_config.py
+```
+This will then output the generated images and results to `data/ffhq`
+
+#### LM1B
+To reproduce the LM1B results (Table 2), run 
+```bash
+cd BitstreamDiffusion
+```
+Then, run
+```bash
+# PPL-NFE sweeps over multiple sampler-schedule configurations
+torchrun --standalone --nnodes=1 --nproc_per_node=1 \
+  -m evaluation.run_eval \
+  --config configs/lm1b/continuous/eval/rate_eval_seeds_sweep.py \
+  --metrics external_ppl
+```
+To compute the external perplexity, and run
+```bash
+# Compute token unigram entropy
+python -m evaluation.compute_entropy_from_caches \
+  --config configs/lm1b/continuous/eval/rate_eval_seeds_sweep.py \
+  --include_real
+```
+To compute the entropy. 
 
 ### Tolerance Grid Search
 This tool is for computing the tradeoff of the PI solver for $\tau_{abs}$ and $\tau_{rel}$. This computes NFE at each point
@@ -140,7 +203,7 @@ gaussian-testing -h
 An example use case is:
 ```bash
 # Run Gaussian tests on a complex Gaussian
-gaussian-testing 10 200 0.05 5 -g "complex" -o "data/gaussian_testing/complex" --h_start 0.15
+gaussian-testing 10 200 0.05 5 -g "complex" -o "data/gaussian_experiment/complex/" --h_start 0.15
 ```
 This runs the Heun and Euler-Maruyama solver from 10 to 200 NFE, and the PI solver from $\tau_{abs}=0.05$ 
-to $\tau_{abs}=5$, on a complex Gaussian.
+to $\tau_{abs}=5$. Note that this reproduces Figure 1a from the paper.

@@ -1,6 +1,7 @@
 import pathlib
 from typing import Callable
 import pickle
+import importlib.util
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -95,6 +96,14 @@ def plot_images(images: list[str], n_cols: int, col_labels: tuple[int,...] = Non
 
     fig.tight_layout()
     return fig
+
+
+def load_config(path: str):
+    spec = importlib.util.spec_from_file_location("config", path)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod.get_config()
 
 
 def compute_discretisation_interpolation(
