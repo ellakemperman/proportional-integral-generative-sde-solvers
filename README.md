@@ -1,4 +1,5 @@
-# Proportional-Integral Time-Step Adaptive Solvers in Diffusion
+# Adaptive Second-Order Solvers for Generative Diffusion Sampling
+## By anonymous authors
 This is the implementation of the thesis: Proportional-Integral Time-Step Adaptive Solvers in Diffusion, which implements an adaptive diffusion sampler
 using Proportional Integral (PI) control based on an adaptive solver by [Ilie et al (2015)](https://link.springer.com/article/10.1007/s11075-014-9872-6). 
 This repository also contains an implementation of extracting average discretisations from the PI controlled adaptive solver.
@@ -10,11 +11,6 @@ with our sampler and schedule generation methods.
 ![ImageNet-64_samples](assets/ablations.png)
 
 ## Installation
-First, clone the repository using
-```bash
-# Clone the repository
-git clone git@github.com:ellakemperman/proportional-integral-generative-sde-solvers.git
-```
 Ensure your Python version is 3.12. Then, install pytorch 2.10.0 using the installation instructions provided [here](https://pytorch.org/get-started/locally/).
 Preferably, install for CUDA, as otherwise sampling is slow.
 
@@ -34,7 +30,7 @@ To run the language experiments, follow the installation instructions in the `Bi
 ## Ref files
 ### ImageNet-64 Ref files
 To be able to compute metrics for the ImageNet-64 dataset, please download the following ImageNet-64 reference files
-from https://huggingface.co/datasets/ellakemperman/ImageNet64-features. Alternatively, these files can be reproduced
+from https://anonymous-hf.com/a/yx1cozswnfwp/. Alternatively, these files can be reproduced
 as well. The method Karras et al (2024) use in [this](https://github.com/NVlabs/edm2) repository is used. First,
 download the ImageNet dataset from [Kaggle](https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data)
 and extract it to a folder (e.g. documents/imagenet).
@@ -55,7 +51,7 @@ This computes the necessary feature vectors and puts them in the `refs` folder.
 
 ### FFHQ Ref files
 To be able to compute metrics for the FFHQ dataset, please download the following FFHQ reference files
-from https://huggingface.co/datasets/ellakemperman/ImageNet64-features. Alternatively, these files can be reproduced
+from https://anonymous-hf.com/a/yx1cozswnfwp/. Alternatively, these files can be reproduced
 as well. The method Karras et al (2024) use in [this](https://github.com/NVlabs/edm) repository is used. First,
 download the FFHQ dataset from [here](https://github.com/NVlabs/ffhq-dataset)
 and extract it to a folder (e.g. documents/ffhq).
