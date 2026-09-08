@@ -152,8 +152,8 @@ class PISolver(Solver):
         :param h: Current step size, tensor of shape (batch_size, 1).
         :return: The new step size, a tensor of shape (batch_size, 1).
         """
-        integral = (self._alpha * self._tau_a / error)**(self._ki + self._kp)
-        proportional = (error_previous / (self._alpha * self._tau_a))**self._kp
+        integral = (self._alpha / error)**(self._ki + self._kp)
+        proportional = (error_previous / self._alpha)**self._kp
         return h * broadcast_vector(torch.clamp(integral * proportional, min=self._max_decrease, max=self._max_increase), h)
 
     def to(self, device: str) -> Solver:
