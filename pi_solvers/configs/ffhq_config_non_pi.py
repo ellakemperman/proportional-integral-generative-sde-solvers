@@ -58,10 +58,6 @@ def get_config():
         "max_iter": 1000
     }
 
-    add_spec("pi", "adaptive", 49, **pi_params(19.2, 40, 5))
-    add_spec("pi", "adaptive", 75, **pi_params(15.3, 35, 7))
-    add_spec("pi", "adaptive", 99, **pi_params(12, 35, 10))
-
     # GGF specs
     ggf_params = lambda tau_rel, h_0, n: {
         "ode_threshold": 0.05,
@@ -89,10 +85,6 @@ def get_config():
     add_spec("heun", "edm", 75)
     add_spec("heun", "edm", 99)
 
-    add_spec("heun", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv")
-    add_spec("heun", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv")
-    add_spec("heun", "pi", 99, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/99NFE/data/_t.csv")
-
     # EDM
     edm_churn_params = {
         "S_churn": 40,
@@ -104,9 +96,5 @@ def get_config():
     add_spec("edm", "edm", 49, **edm_churn_params)
     add_spec("edm", "edm", 75, **edm_churn_params)
     add_spec("edm", "edm", 99, **edm_churn_params)
-
-    add_spec("edm", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv", **edm_churn_params)
-    add_spec("edm", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv", **edm_churn_params)
-    add_spec("edm", "pi", 99, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/99NFE/data/_t.csv", **edm_churn_params)
 
     return cfg

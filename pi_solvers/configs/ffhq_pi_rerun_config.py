@@ -62,32 +62,6 @@ def get_config():
     add_spec("pi", "adaptive", 75, **pi_params(15.3, 35, 7))
     add_spec("pi", "adaptive", 99, **pi_params(12, 35, 10))
 
-    # GGF specs
-    ggf_params = lambda tau_rel, h_0, n: {
-        "ode_threshold": 0.05,
-        "n_ode_steps": n,
-        "tau_a": 0.0078,
-        "tau_r": tau_rel,
-        "alpha": 0.7,
-        "h_start": h_0,
-        "max_decrease": 0.2,
-        "max_increase": 5,
-        "r": 0.1,
-        "max_iter": 1000
-    }
-    add_spec("ggf", "adaptive", 49, **ggf_params(25.4, 25, 5))
-    add_spec("ggf", "adaptive", 75, **ggf_params(17.15, 25, 7))
-    add_spec("ggf", "adaptive", 99, **ggf_params(13.7, 20, 10))
-
-    # EM
-    add_spec("euler-maruyama", "edm", 49)
-    add_spec("euler-maruyama", "edm", 75)
-    add_spec("euler-maruyama", "edm", 99)
-
-    # Stochastic Heun
-    add_spec("heun", "edm", 49)
-    add_spec("heun", "edm", 75)
-    add_spec("heun", "edm", 99)
 
     add_spec("heun", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv")
     add_spec("heun", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv")
@@ -100,10 +74,6 @@ def get_config():
         "S_max": 50,
         "S_noise": 1.003
     }
-
-    add_spec("edm", "edm", 49, **edm_churn_params)
-    add_spec("edm", "edm", 75, **edm_churn_params)
-    add_spec("edm", "edm", 99, **edm_churn_params)
 
     add_spec("edm", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv", **edm_churn_params)
     add_spec("edm", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv", **edm_churn_params)

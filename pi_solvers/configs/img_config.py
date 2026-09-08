@@ -40,6 +40,7 @@ def get_config():
         spec.sampler_schedule_path = sampler_schedule_path
         spec.sampler_kwargs = sampler_kwargs
         spec.out_path = f"{cfg.base_out}/{sampler_name}_{sampler_schedule_name}/{nfe}NFE/"
+        spec.spec_path = f"{sampler_name}_{sampler_schedule_name}/{nfe}NFE/"
         spec.ode_threshold = ode_threshold
         cfg.specs.append(spec)
 
