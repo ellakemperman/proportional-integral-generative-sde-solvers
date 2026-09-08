@@ -194,7 +194,7 @@ def apply_over_grid(
             reject_counter = RejectCounter()
 
             solver = construct_heun_end_adaptive_solver(
-                rsde,
+                sde=rsde,
                 adaptive_solver_class=PISolver,
                 tau_a=tau_a,
                 tau_r=tau_r,
