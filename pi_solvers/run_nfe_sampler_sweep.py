@@ -74,7 +74,7 @@ def resolve_spec(cfg: config_dict, spec: config_dict, seed: int = None, out_dir:
     )
 
     #
-    with open(cfg.metrics_out + "results.txt", "a") as f:
+    with open(out_path + "results.txt", "a") as f:
         f.write(f"{sampler_name}-{sampler_schedule_name}-{spec.nfe}: ")
         for metric in metrics:
             f.write(metric + ", ")
