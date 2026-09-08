@@ -203,7 +203,8 @@ def apply_over_grid(
             ).to(device)
 
             images = solver.solve(noise.clone(), labels=labels, callback=reject_counter)
-
+            if labels is None:
+                labels = torch.zeros(batch_size)
             for k, (image, label) in enumerate(zip(encoder.decode(images).permute(0, 2, 3, 1).cpu().numpy(), labels)):
                 label = torch.argmax(label)
                 dir_path = os.path.join(outdir, f"abs_{round(tau_a, 3)}_rel_{round(tau_r, 3)}")
