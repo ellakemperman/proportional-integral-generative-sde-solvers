@@ -173,8 +173,12 @@ def apply_over_grid(
     # Sample noise and labels
     x = torch.zeros((batch_size, model.img_channels, model.img_resolution, model.img_resolution)).to(device)
     noise = torch.randn_like(x) * 80
-    labels = torch.eye(model.label_dim, device=device)[
-        torch.randint(high=model.label_dim, size=(batch_size,), device=device)]
+
+    if model.label_dim > 0:
+        labels = torch.eye(model.label_dim, device=device)[
+            torch.randint(high=model.label_dim, size=(batch_size,), device=device)]
+    else:
+        labels = None
 
     nfes = torch.zeros_like(grid[0])
     reject_rate = torch.zeros_like(grid[0])
