@@ -127,7 +127,7 @@ An example usage of this command is:
 tolerance-grid-search 0.01 0.1 10 50 20 "data/tolerance_grid/test" --metric MIND --ref refs/img64_features.pkl \
   --model https://nvlabs-fi-cdn.nvidia.com/edm2/posthoc-reconstructions/edm2-img64-xl-0671088-0.040.pkl 
   
-tolerance-grid-search 0.005 0.1 0.1 2 20 "data/tolerance_grid/test" --metric MIND --ref refs/img64_features.pkl \
+tolerance-grid-search 0.005 0.1 0.1 2 20 "data/tolerance_grid/test" --metric MIND --ref refs/FFHQ_features.pkl \
 --model https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-ve.pkl
 ```
 Which uses the EDM2-XL-FID checkpoint to generate Imagenet-64 images an a tolerance grid of $\tau_{abs}\in[0.01, 0.1]$ and

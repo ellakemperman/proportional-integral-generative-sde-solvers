@@ -146,7 +146,7 @@ if __name__ == "__main__":
     )
 
     sample_sd(
-        "white",
+        "a plain white image",
         solver_func=solver_constructor,
         outdir="../../data/sd/test/",
         guidance_scale=7.5,

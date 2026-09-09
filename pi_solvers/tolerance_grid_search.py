@@ -5,6 +5,7 @@ import torch
 import pandas as pd
 
 from pi_solvers.evaluation import metrics, hyperparameter_search
+from pi_solvers.evaluation.hyperparameter_search import create_grid
 from pi_solvers.utils import write_general_info
 
 
@@ -61,6 +62,8 @@ def main():
                         help="Metric to use for grid evaluation. If None, no grid evaluation is executed.")
     parser.add_argument("--ref", default=None, type=str,
                         help="Reference statistics relevant for the metric. If None, no grid evaluation is executed.")
+    parser.add_argument("--use_cache", action="store_true", help="Images already exist, just rerun plotting")
+    parser.add_argument("--no_plots", action="store_true", help="Just store data, don't generate plots")
 
     args = parser.parse_args()
 
@@ -70,32 +73,41 @@ def main():
     write_general_info(args.outdir + "/info.txt", **vars(args))
 
     # Compute grid
-    print("Computing grid...")
-    nfes, reject_rate, grid = hyperparameter_search.apply_over_grid(**vars(args))
+    if not args.use_cache:
+        print("Computing grid...")
+        nfes, reject_rate, grid = hyperparameter_search.apply_over_grid(**vars(args))
 
-    # Save grid
-    print("Saving grid...")
-    df_nfe = pd.DataFrame((nfes).cpu().numpy())
-    df_nfe.to_csv(args.outdir + "/nfe.csv")
+        # Save grid
+        print("Saving grid...")
+        df_nfe = pd.DataFrame((nfes).cpu().numpy())
+        df_nfe.to_csv(args.outdir + "/nfe.csv")
 
-    df_reject = pd.DataFrame(reject_rate.cpu().numpy())
-    df_reject.to_csv(args.outdir + "/reject.csv")
+        df_reject = pd.DataFrame(reject_rate.cpu().numpy())
+        df_reject.to_csv(args.outdir + "/reject.csv")
+    else:
+        df_nfe = pd.read_csv(args.outdir + "/nfe.csv")
+        df_reject = pd.read_csv(args.outdir + "/reject.csv")
+        nfes = df_nfe.to_numpy()[:, 1:]
+        reject_rate = df_reject.to_numpy()[:, 1:]
+        print(nfes.shape, reject_rate.shape)
+        grid = create_grid(tau_a_range=(args.tau_a_min, args.tau_a_max), tau_r_range=(args.tau_r_min, args.tau_r_max), resolution=args.resolution)
 
     # Plot grid
     print("Plotting grid...")
-    hyperparameter_search.plot_grid(
-        grid,
-        nfes,
-        args.outdir,
-        "NFE",
-        gamma=0.5
-    )
-    hyperparameter_search.plot_grid(
-        grid,
-        reject_rate,
-        args.outdir,
-        "Reject rate"
-    )
+    if not args.no_plots:
+        hyperparameter_search.plot_grid(
+            grid,
+            nfes,
+            args.outdir,
+            "NFE",
+            gamma=0.5
+        )
+        hyperparameter_search.plot_grid(
+            grid,
+            reject_rate,
+            args.outdir,
+            "Reject rate"
+        )
 
     # Calculate metrics
     if args.metric is not None and args.ref is not None:
@@ -120,12 +132,13 @@ def main():
             grid, ratings
         )
 
-        # Plotting ratings
-        print("Generating plots...")
-        hyperparameter_search.plot_grid(
-            grid,
-            ratings,
-            args.outdir,
-            f"{args.metric.value}",
-            gamma=0.5
-        )
+        if not args.no_plots:
+            # Plotting ratings
+            print("Generating plots...")
+            hyperparameter_search.plot_grid(
+                grid,
+                ratings,
+                args.outdir,
+                f"{args.metric.value}",
+                gamma=0.5
+            )
