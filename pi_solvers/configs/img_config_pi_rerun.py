@@ -7,19 +7,19 @@ def get_config():
     cfg = config_dict.ConfigDict()
 
     # Sampling
-    cfg.model = "https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-ve.pkl"
+    cfg.model = "https://nvlabs-fi-cdn.nvidia.com/edm2/posthoc-reconstructions/edm2-img64-xl-0671088-0.040.pkl"
     cfg.n_samples = 50000
     cfg.sampling_batch_size = 128
     cfg.device = "cuda:0"
     cfg.seed = 0
     cfg.ode = False
     cfg.exist_okay = True
-    cfg.base_out = "data/ffhq/"
+    cfg.base_out = "data/imagenet-64/"
 
     # Evaluation
     cfg.metrics = [Metrics.FID]
-    cfg.feature_path = "refs/ffhq_features.pkl"
-    cfg.stats_path = "refs/ffhq_stats.pkl"
+    cfg.feature_path = "refs/img_features.pkl"
+    cfg.stats_path = "refs/img_stats.pkl"
     cfg.eval_batch_size = 1024
     cfg.metrics_out = cfg.base_out
 
@@ -58,10 +58,11 @@ def get_config():
         "max_iter": 1000
     }
 
-    add_spec("pi", "adaptive", 49, **pi_params(1.15, 40, 5))
-    add_spec("pi", "adaptive", 75, **pi_params(0.92, 35, 7))
+    add_spec("pi", "adaptive", 49, **pi_params(1.08, 45, 5))
+    add_spec("pi", "adaptive", 75, **pi_params(0.87, 40, 7))
     add_spec("pi", "adaptive", 99, **pi_params(0.72, 35, 10))
 
+    # PI specs
     pi_params = lambda tau_rel, h_0, n: {
         "n_ode_steps": n,
         "ki": 0.3,
@@ -75,10 +76,11 @@ def get_config():
         "max_iter": 1000
     }
 
-    add_spec("pi_integral", "adaptive", 49, **pi_params(1.06, 40, 5))
-    add_spec("pi_integral", "adaptive", 75, **pi_params(0.88, 35, 7))
+    add_spec("pi_integral", "adaptive", 49, **pi_params(1.015, 45, 5))
+    add_spec("pi_integral", "adaptive", 75, **pi_params(0.83, 40, 7))
     add_spec("pi_integral", "adaptive", 99, **pi_params(0.7, 35, 10))
 
+    # Stochastic Heun
     add_spec("heun", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv")
     add_spec("heun", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv")
     add_spec("heun", "pi", 99, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/99NFE/data/_t.csv")
@@ -90,6 +92,7 @@ def get_config():
         "S_max": 50,
         "S_noise": 1.003
     }
+
 
     add_spec("edm", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv", **edm_churn_params)
     add_spec("edm", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv", **edm_churn_params)

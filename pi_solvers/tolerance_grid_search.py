@@ -112,20 +112,23 @@ def main():
     # Calculate metrics
     if args.metric is not None and args.ref is not None:
         print("Calculating metric for all tolerances...")
-        rater = hyperparameter_search.MetricRater(
-            args.metric,
-            torch.load(args.ref),
-            args.batch_size,
-            args.device
-        )
-        ratings = hyperparameter_search.evaluate_images(
-            args.outdir,
-            rater=rater,
-            seed=args.seed
-        )
+        if not args.use_cache:
+            rater = hyperparameter_search.MetricRater(
+                args.metric,
+                torch.load(args.ref),
+                args.batch_size,
+                args.device
+            )
+            ratings = hyperparameter_search.evaluate_images(
+                args.outdir,
+                rater=rater,
+                seed=args.seed
+            )
 
-        print("Saving ratings...")
-        ratings.to_csv(args.outdir + "/ratings.csv")
+            print("Saving ratings...")
+            ratings.to_csv(args.outdir + "/ratings.csv")
+        else:
+            ratings = pd.read_csv(args.outdir + "/ratings.csv")
 
         # Getting ratings in proper grid form
         ratings = hyperparameter_search.get_ratings_grid(
@@ -140,5 +143,14 @@ def main():
                 ratings,
                 args.outdir,
                 f"{args.metric.value}",
+                gamma=0.5
+            )
+
+            ratings_nfe = ratings * nfes
+            hyperparameter_search.plot_grid(
+                grid,
+                ratings_nfe,
+                args.outdir,
+                f"{args.metric.value}_NFE",
                 gamma=0.5
             )
