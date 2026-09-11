@@ -23,7 +23,7 @@ def resolve_spec(cfg: config_dict, spec: config_dict, seed: int = None, out_dir:
     elif sampler_name.lower() in ["ggf", "gotta-go-fast"]:
         sampler_func = generate_ggf_images
 
-    elif sampler_name.lower() in ["pi", "propotional-integral"]:
+    elif sampler_name.lower() in ["pi", "propotional-integral", "pi_integral"]:
         sampler_func = generate_pi_images
 
     else:
