@@ -118,7 +118,7 @@ def get_pi_schedule(
     # Add EDM schedule for the last few steps
     edm_end = get_edm_schedule(n_ode_steps, t_min, t_ode)
 
-    return torch.cat([pi_schedule[:-1], edm_end])
+    return torch.cat([pi_schedule[:-2], edm_end])
 
 
 # Adapted from EDM2: https://github.com/NVlabs/edm2/tree/main
