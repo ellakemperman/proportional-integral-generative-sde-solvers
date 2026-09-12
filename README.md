@@ -90,7 +90,9 @@ This will then output the generated images and results to `data/ffhq`
 To reproduce the ImageNet-64 (Table 1) results, run
 ```bash
 # FID-NFE sweeps over multiple sampler-schedule configurations
-nfe-sweep pi_solvers/configs/img_config.py
+nfe-sweep pi_solvers/configs/img_config_pi_rerun.py -d cuda:0 -s 0 -o data/image_testing/imagenet0
+nfe-sweep pi_solvers/configs/img_config_pi_rerun.py -d cuda:1 -s 50000 -o data/image_testing/imagenet1
+nfe-sweep pi_solvers/configs/img_config_pi_rerun.py -d cuda:2 -s 100000 -o data/image_testing/imagenet2
 ```
 This will then output the generated images and results to `data/ffhq`
 
