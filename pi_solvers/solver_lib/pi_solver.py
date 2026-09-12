@@ -68,7 +68,8 @@ class PISolver(Solver):
         error = torch.full((x.shape[0],), self._alpha).to(self._device)
         end_condition = broadcast_vector(torch.full((x.shape[0],), self._end_time), x).to(self._device)
         if labels is None:
-            labels = torch.zeros(x.shape[0],).to(self._device)
+            labels = torch.zeros(x.shape[0], )
+        labels = labels.to(self._device)
         reject_count = 0
         not_reject_count = 0
         x_full, t_full, h_full = x, t, h
