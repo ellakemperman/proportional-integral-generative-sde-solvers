@@ -80,7 +80,9 @@ to reproduce the main tables.
 To reproduce the FFHQ (Table 1) results, run
 ```bash
 # FID-NFE sweeps over multiple sampler-schedule configurations
-nfe-sweep pi_solvers/configs/ffhq_config.py
+nfe-sweep pi_solvers/configs/ffhq_pi_rerun_config.py -d cuda:1 -s 0 -o data/image_testing/ffhq0
+    nfe-sweep pi_solvers/configs/ffhq_pi_rerun_config.py -d cuda:2 -s 50000 -o data/image_testing/ffhq1
+nfe-sweep pi_solvers/configs/ffhq_pi_rerun_config.py -d cuda:3 -s 100000 -o data/image_testing/ffhq2
 ```
 This will then output the generated images and results to `data/ffhq`
 

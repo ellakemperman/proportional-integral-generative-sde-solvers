@@ -38,6 +38,7 @@ def get_config():
         spec.sampler_schedule_name = sampler_schedule_name
         spec.nfe = nfe
         spec.sampler_schedule_path = sampler_schedule_path
+        spec.sampler_schedule_dir = f"{cfg.base_out}/{sampler_schedule_path}"
         spec.sampler_kwargs = sampler_kwargs
         spec.out_path = f"{cfg.base_out}/{sampler_name}_{sampler_schedule_name}/{nfe}NFE/"
         spec.spec_path = f"{sampler_name}_{sampler_schedule_name}/{nfe}NFE/"
@@ -79,9 +80,9 @@ def get_config():
     add_spec("pi_integral", "adaptive", 75, **pi_params(0.88, 35, 7))
     add_spec("pi_integral", "adaptive", 99, **pi_params(0.7, 35, 10))
 
-    add_spec("heun", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv")
-    add_spec("heun", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv")
-    add_spec("heun", "pi", 99, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/99NFE/data/_t.csv")
+    add_spec("heun", "pi", 49, sampler_schedule_path=f"pi_adaptive/49NFE/data/_t.csv")
+    add_spec("heun", "pi", 75, sampler_schedule_path=f"pi_adaptive/75NFE/data/_t.csv")
+    add_spec("heun", "pi", 99, sampler_schedule_path=f"pi_adaptive/99NFE/data/_t.csv")
 
     # EDM
     edm_churn_params = {
@@ -91,8 +92,8 @@ def get_config():
         "S_noise": 1.003
     }
 
-    add_spec("edm", "pi", 49, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/49NFE/data/_t.csv", **edm_churn_params)
-    add_spec("edm", "pi", 75, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/75NFE/data/_t.csv", **edm_churn_params)
-    add_spec("edm", "pi", 99, sampler_schedule_path=f"{cfg.base_out}/pi_adaptive/99NFE/data/_t.csv", **edm_churn_params)
+    add_spec("edm", "pi", 49, sampler_schedule_path=f"pi_adaptive/49NFE/data/_t.csv", **edm_churn_params)
+    add_spec("edm", "pi", 75, sampler_schedule_path=f"pi_adaptive/75NFE/data/_t.csv", **edm_churn_params)
+    add_spec("edm", "pi", 99, sampler_schedule_path=f"pi_adaptive/99NFE/data/_t.csv", **edm_churn_params)
 
     return cfg

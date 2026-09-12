@@ -31,18 +31,19 @@ def resolve_spec(cfg: config_dict, spec: config_dict, seed: int = None, out_dir:
 
     # Resolve schedule name
     sampler_schedule_name = spec.sampler_schedule_name
+    if out_dir is not None:
+        out_path = out_dir + spec.spec_path
+        sampler_schedule_path = out_dir + spec.sampler_schedule_path
+    else:
+        out_path = spec.out_path
+        sampler_schedule_path = spec.sampler_schedule_dir
 
     if sampler_schedule_name.lower() in ["pi", "pi-static", "propotional-integral"]:
-        func = lambda **kwargs: sampler_func(pi_discretisation=spec.sampler_schedule_path, **kwargs)
+        func = lambda **kwargs: sampler_func(pi_discretisation=sampler_schedule_path, **kwargs)
     else:
         func = sampler_func
 
     # Generate images
-    if out_dir is not None:
-        out_path = out_dir + spec.spec_path
-    else:
-        out_path = spec.out_path
-
     seed = cfg.seed if seed is None else seed
     device = cfg.device if device is None else device
 
@@ -74,7 +75,7 @@ def resolve_spec(cfg: config_dict, spec: config_dict, seed: int = None, out_dir:
     )
 
     #
-    with open(out_path + "results.txt", "a") as f:
+    with open(out_dir + "results.txt", "a") as f:
         f.write(f"{sampler_name}-{sampler_schedule_name}-{spec.nfe}: ")
         for metric in metrics:
             f.write(metric + ", ")
