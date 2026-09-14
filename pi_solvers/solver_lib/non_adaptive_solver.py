@@ -86,6 +86,7 @@ def get_entropy_schedule(
     time_func, time = times["time_func"], times["time"]
     discretisation = torch.tensor(np.interp(np.linspace(time_func[0], time_func[-1], n_steps), time_func, time),
                         dtype=torch.float32).flip(0)
+    print(discretisation, discretisation.shape)
     return torch.cat([discretisation, torch.zeros(1,)])
 
 

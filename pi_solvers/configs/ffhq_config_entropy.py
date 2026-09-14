@@ -47,14 +47,14 @@ def get_config():
     # EM
     ret_path = "refs/ret_ffhq.pt"
 
-    add_spec("euler-maruyama", "entropic", 49, sampling_schedule_path=ret_path)
-    add_spec("euler-maruyama", "entropic", 75, sampling_schedule_path=ret_path)
-    add_spec("euler-maruyama", "entropic", 99, sampling_schedule_path=ret_path)
+    add_spec("euler-maruyama", "entropic", 49, sampler_schedule_path=ret_path)
+    add_spec("euler-maruyama", "entropic", 75, sampler_schedule_path=ret_path)
+    add_spec("euler-maruyama", "entropic", 99, sampler_schedule_path=ret_path)
 
     # Stochastic Heun
-    add_spec("heun", "entropic", 49, sampling_schedule_path=ret_path)
-    add_spec("heun", "entropic", 75, sampling_schedule_path=ret_path)
-    add_spec("heun", "entropic", 99, sampling_schedule_path=ret_path)
+    add_spec("heun", "entropic", 49, sampler_schedule_path=ret_path)
+    add_spec("heun", "entropic", 75, sampler_schedule_path=ret_path)
+    add_spec("heun", "entropic", 99, sampler_schedule_path=ret_path)
 
     # EDM
     edm_churn_params = {
@@ -64,8 +64,8 @@ def get_config():
         "S_noise": 1.003
     }
 
-    add_spec("edm", "entropic", 49, **edm_churn_params, sampling_schedule_path=ret_path)
-    add_spec("edm", "entropic", 75, **edm_churn_params, sampling_schedule_path=ret_path)
-    add_spec("edm", "entropic", 99, **edm_churn_params, sampling_schedule_path=ret_path)
+    add_spec("edm", "entropic", 49, **edm_churn_params, sampler_schedule_path=ret_path)
+    add_spec("edm", "entropic", 75, **edm_churn_params, sampler_schedule_path=ret_path)
+    add_spec("edm", "entropic", 99, **edm_churn_params, sampler_schedule_path=ret_path)
 
     return cfg
