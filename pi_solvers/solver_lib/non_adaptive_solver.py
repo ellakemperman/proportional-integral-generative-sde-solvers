@@ -82,12 +82,11 @@ def get_entropy_schedule(
         n_steps: int,
         entropy_checkpoint: str = "../../refs/img64_rescaled_entropic_time.pt"
 ):
-    times = torch.load(entropy_checkpoint)["time"].flip(dims=(0,))
-    xp = np.arange(0, times.shape[0])
-    points = np.linspace(0, times.shape[0], n_steps - 1)
-    discretisation = np.interp(points, xp, times.numpy())
-    discretisation = np.concatenate([discretisation, np.array([0])])
-    return torch.tensor(discretisation)
+    times = torch.load(entropy_checkpoint)
+    time_func, time = times["time_func"], times["time"]
+    discretisation = torch.tensor(np.interp(np.linspace(time_func[0], time_func[-1], n_steps), time_func, time),
+                        dtype=torch.float32).flip(0)
+    return torch.cat([discretisation, torch.zeros(1,)])
 
 
 def get_pi_schedule(
