@@ -35,6 +35,8 @@ def resolve_spec(cfg: config_dict, spec: config_dict, seed: int = None, out_dir:
         out_path = out_dir + spec.spec_path
         if spec.sampler_schedule_path is not None and not spec.raw_path:
             sampler_schedule_path = out_dir + spec.sampler_schedule_path
+        else:
+            sampler_schedule_path = spec.sampler_schedule_path
     else:
         out_path = spec.out_path
         sampler_schedule_path = spec.sampler_schedule_path
