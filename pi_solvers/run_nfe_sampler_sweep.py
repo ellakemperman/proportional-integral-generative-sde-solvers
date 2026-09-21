@@ -39,7 +39,7 @@ def resolve_spec(cfg: config_dict, spec: config_dict, seed: int = None, out_dir:
         out_path = spec.out_path
         sampler_schedule_path = spec.sampler_schedule_dir
 
-    if sampler_schedule_name.lower() in ["pi", "pi-static", "propotional-integral"]:
+    if sampler_schedule_name.lower() in ["pi", "pi-static", "propotional-integral", "pi-lm1b"]:
         func = lambda **kwargs: sampler_func(pi_discretisation=sampler_schedule_path, **kwargs)
     elif sampler_schedule_name.lower() in ["entropic", "ret", "rescaled-entropic-time"]:
         func = lambda **kwargs: sampler_func(entropy_checkpoint=spec.sampler_schedule_path, **kwargs)

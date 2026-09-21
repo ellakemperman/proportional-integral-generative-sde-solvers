@@ -48,9 +48,9 @@ def get_config():
     # PI specs
     sampler_schedule_path = "BitstreamDiffusion/runs/paper/unconditional_text/lm1b/continuous_rate_raw_binary_bits_1M_edm_weighting/evaluation_solver_schedule_nfe_sweep/pi_files/_t.csv"
 
-    add_spec("heun", "pi_lm1b", 49, sampler_schedule_path=sampler_schedule_path)
-    add_spec("heun", "pi_lm1b", 75, sampler_schedule_path=sampler_schedule_path)
-    add_spec("heun", "pi_lm1b", 99, sampler_schedule_path=sampler_schedule_path)
+    add_spec("heun", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path)
+    add_spec("heun", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path)
+    add_spec("heun", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path)
 
     # EDM
     edm_churn_params = {
@@ -60,8 +60,8 @@ def get_config():
         "S_noise": 1.003
     }
 
-    add_spec("edm", "pi_lm1b", 49, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
-    add_spec("edm", "pi_lm1b", 75, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
-    add_spec("edm", "pi_lm1b", 99, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
+    add_spec("edm", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
+    add_spec("edm", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
+    add_spec("edm", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
 
     return cfg
