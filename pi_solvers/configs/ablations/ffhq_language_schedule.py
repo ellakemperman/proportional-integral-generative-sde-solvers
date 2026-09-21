@@ -31,14 +31,18 @@ def get_config():
             nfe: int,
             ode_threshold: float = 0.05,
             sampler_schedule_path: str | None = None,
+            raw_path: bool = False,
             **sampler_kwargs
     ):
         spec = config_dict.ConfigDict()
         spec.sampler_name = sampler_name
         spec.sampler_schedule_name = sampler_schedule_name
         spec.nfe = nfe
-        spec.sampler_schedule_path = sampler_schedule_path
-        spec.sampler_schedule_dir = f"{cfg.base_out}/{sampler_schedule_path}"
+        spec.raw_path = raw_path
+        if raw_path:
+            spec.sampler_schedule_path = sampler_schedule_path
+        else:
+            spec.sampler_schedule_path = f"{cfg.base_out}/{sampler_schedule_path}"
         spec.sampler_kwargs = sampler_kwargs
         spec.out_path = f"{cfg.base_out}/{sampler_name}_{sampler_schedule_name}/{nfe}NFE/"
         spec.spec_path = f"{sampler_name}_{sampler_schedule_name}/{nfe}NFE/"
@@ -46,11 +50,11 @@ def get_config():
         cfg.specs.append(spec)
 
     # PI specs
-    sampler_schedule_path = "BitstreamDiffusion/runs/paper/unconditional_text/lm1b/continuous_rate_raw_binary_bits_1M_edm_weighting/evaluation_solver_schedule_nfe_sweep/pi_files/_t.csv"
+    sampler_schedule_path = "/BitstreamDiffusion/runs/paper/unconditional_text/lm1b/continuous_rate_raw_binary_bits_1M_edm_weighting/evaluation_solver_schedule_nfe_sweep/pi_files/_t.csv"
 
-    add_spec("heun", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path)
-    add_spec("heun", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path)
-    add_spec("heun", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path)
+    add_spec("heun", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path, raw_path=True)
+    add_spec("heun", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path, raw_path=True)
+    add_spec("heun", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path, raw_path=True)
 
     # EDM
     edm_churn_params = {
@@ -60,8 +64,8 @@ def get_config():
         "S_noise": 1.003
     }
 
-    add_spec("edm", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
-    add_spec("edm", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
-    add_spec("edm", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
+    add_spec("edm", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path, raw_path=True, **edm_churn_params)
+    add_spec("edm", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path, raw_path=True, **edm_churn_params)
+    add_spec("edm", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path, raw_path=True, **edm_churn_params)
 
     return cfg
