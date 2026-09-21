@@ -7,19 +7,19 @@ def get_config():
     cfg = config_dict.ConfigDict()
 
     # Sampling
-    cfg.model = "https://nvlabs-fi-cdn.nvidia.com/edm2/posthoc-reconstructions/edm2-img64-xl-0671088-0.040.pkl"
+    cfg.model = "https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-ve.pkl"
     cfg.n_samples = 50000
     cfg.sampling_batch_size = 128
     cfg.device = "cuda:0"
     cfg.seed = 0
     cfg.ode = False
     cfg.exist_okay = True
-    cfg.base_out = "data/imagenet-64/"
+    cfg.base_out = "data/ffhq/"
 
     # Evaluation
     cfg.metrics = [Metrics.FID]
-    cfg.feature_path = "refs/img64_features.pkl"
-    cfg.stats_path = "refs/img64_stats.pkl"
+    cfg.feature_path = "refs/ffhq_features.pkl"
+    cfg.stats_path = "refs/ffhq_stats.pkl"
     cfg.eval_batch_size = 1024
     cfg.metrics_out = cfg.base_out
 
@@ -45,17 +45,12 @@ def get_config():
         spec.ode_threshold = ode_threshold
         cfg.specs.append(spec)
 
-    # EM
-    ret_path = "refs/ret_img64.pt"
+    # PI specs
+    sampler_schedule_path = "BitstreamDiffusion/runs/paper/unconditional_text/lm1b/continuous_rate_raw_binary_bits_1M_edm_weighting/evaluation_solver_schedule_nfe_sweep/pi_files/_t.csv"
 
-    add_spec("euler-maruyama", "entropic", 49, sampler_schedule_path=ret_path)
-    add_spec("euler-maruyama", "entropic", 75, sampler_schedule_path=ret_path)
-    add_spec("euler-maruyama", "entropic", 99, sampler_schedule_path=ret_path)
-
-    # Stochastic Heun
-    add_spec("heun", "entropic", 49, sampler_schedule_path=ret_path)
-    add_spec("heun", "entropic", 75, sampler_schedule_path=ret_path)
-    add_spec("heun", "entropic", 99, sampler_schedule_path=ret_path)
+    add_spec("heun", "pi_lm1b", 49, sampler_schedule_path=sampler_schedule_path)
+    add_spec("heun", "pi_lm1b", 75, sampler_schedule_path=sampler_schedule_path)
+    add_spec("heun", "pi_lm1b", 99, sampler_schedule_path=sampler_schedule_path)
 
     # EDM
     edm_churn_params = {
@@ -65,8 +60,8 @@ def get_config():
         "S_noise": 1.003
     }
 
-    add_spec("edm", "entropic", 49, **edm_churn_params, sampler_schedule_path=ret_path)
-    add_spec("edm", "entropic", 75, **edm_churn_params, sampler_schedule_path=ret_path)
-    add_spec("edm", "entropic", 99, **edm_churn_params, sampler_schedule_path=ret_path)
+    add_spec("edm", "pi_lm1b", 49, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
+    add_spec("edm", "pi_lm1b", 75, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
+    add_spec("edm", "pi_lm1b", 99, sampler_schedule_path=sampler_schedule_path, **edm_churn_params)
 
     return cfg

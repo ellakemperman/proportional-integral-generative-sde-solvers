@@ -62,6 +62,8 @@ def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float 
 
     t_grid, means, stds, paths = get_paths(data_path, t_max, t_ode, plot_res)
 
+    means = means[:-1] / (means[:-1] - means[1:]) / (plot_res)
+
     random_paths = paths[np.random.randint(0, paths.shape[0], n_paths), :]
 
     print("Plotting...")
@@ -71,8 +73,9 @@ def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float 
         ax.plot(t_grid, means, label=label, c=color)
         ax.fill_between(t_grid[:plot_res], means[:plot_res] + stds, means[:plot_res] - stds, alpha=0.1, color=color)
     else:
+        t_grid = np.linspace(0, 1, means.shape[0])
         ax.plot(t_grid, means, label=label, c=color)
-        ax.fill_between(t_grid, means + stds, means - stds, alpha=0.1, color=color)
+        # ax.fill_between(t_grid, means + stds, means - stds, alpha=0.1, color=color)
 
     # Plot random paths
     for i in range(n_paths):
@@ -80,10 +83,10 @@ def generate_pi_image_trajectories(ax, label: str, data_path: str, t_max: float 
 
     # plt.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Discretisation")
     ax.legend()
-    plt.yscale("log")
+    # plt.yscale("log")
     ax.set_xlim(0, 1)
     ax.set_xlabel(r"Fraction along SDE path $i/N$")
-    ax.set_ylim(t_min, t_max)
+    # ax.set_ylim(t_min, t_max)
     ax.set_ylabel(r"$\sigma$")
     ax.grid()
     return ax
@@ -114,9 +117,9 @@ def analyse_pi_gaussian_trajectories(ax, label: str, data_path: str, t_max: floa
 
 
 if __name__ == "__main__":
-    data_path = "../../data/image_testing/pi_2/75NFE_2/data"
-    t_min = 0.002
-    t_max = 80
+    data_path = "../../data/sd/test/white"
+    t_min = 100
+    t_max = 999
 
     fig = plt.figure(dpi=300)
     # creating a dictionary
@@ -126,6 +129,7 @@ if __name__ == "__main__":
     plt.rc('font', **font)
     fig.set_size_inches(5, 3.75)
     ax = fig.add_subplot(111)
+    """
     discretisation = get_edm_schedule(200, t_min=t_min)[:-1]
     ax.plot(np.linspace(0, 1, discretisation.shape[0]), discretisation, label="EDM Schedule", c="y")
     cfg = load_config("../../BitstreamDiffusion/configs/lm1b/continuous/eval/rate_eval_seeds.py")
@@ -143,8 +147,13 @@ if __name__ == "__main__":
     generate_pi_image_trajectories(ax, data_path="../../data/image_testing/pi/Cluster/ffhq_test/data", label="PI Static FFHQ (ours)", t_min=t_min, t_max=t_max, n_paths=0, color="g")
     generate_pi_image_trajectories(ax, data_path="../../data/text_data/pi_files/run2", label="PI Static LM1B (ours)", t_ode=t_min, t_min=t_min, t_max=t_max, n_paths=0, color="b")
     # analyse_pi_gaussian_trajectories(ax, data_path=data_path, label="PI Average", t_max=1, t_min=0, n_paths=3)
-
-
+    """
+    generate_pi_image_trajectories(ax, data_path=data_path, label="White", t_min=t_min,
+                                       t_max=t_max, n_paths=0, color="r", t_ode=100)
+    generate_pi_image_trajectories(ax, data_path="../../data/sd/test/reali", label="future-city", t_min=t_min,
+                                   t_max=t_max, n_paths=0, color="g", t_ode=100)
+    generate_pi_image_trajectories(ax, data_path="../../data/sd/test/young", label="disney-woman", t_min=t_min,
+                                   t_max=t_max, n_paths=0, color="b", t_ode=100)
 
     fig.show()
 

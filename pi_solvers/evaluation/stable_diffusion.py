@@ -9,6 +9,7 @@ from transformers import CLIPTextModel, CLIPTokenizer
 
 from pi_solvers.solver_lib import Solver, construct_heun_end_adaptive_solver, PISolver
 from pi_solvers.sde_lib import SDE, StableDiffusionVPSDE
+from pi_solvers.utils.data_logger import PIDataLogger
 
 
 class StableDiffusionModel:
@@ -107,22 +108,16 @@ def sample_sd(
 
     res = model.network.config["sample_size"]
     channels = model.network.config["in_channels"]
-
-    def pi_callback(x, t, h, error):
-        print(f"t = {torch.mean(t)}", end=" ")
-        print(f"h = {torch.mean(h)}", end=" ")
-        print(f"error = {torch.mean(error)}")
-
+    os.makedirs(f"{outdir}/{prompt[:5]}/", exist_ok=True)
+    callback = PIDataLogger(f"{outdir}/{prompt[:5]}/", batch_size=batch_size)
     x = torch.randn((batch_size, channels, res, res), generator=rng).to(device)
-    print(x.shape)
-    x_solved = solver.solve(x, callback=pi_callback)
-    print(f"nfe: {rsde.nfe / batch_size}")
+    x_solved = solver.solve(x, callback=callback)
     nfe = rsde.nfe / batch_size
     images = model.decode(x_solved)
-    print(images.shape)
+    callback.write()
 
     for i, image in enumerate(images):
-        PIL.Image.fromarray(image, "RGB").save(os.path.join(outdir, f"{nfe}NFE_{prompt[:50]}_{i}.png"))
+        PIL.Image.fromarray(image, "RGB").save(os.path.join(outdir, f"{prompt[:5]}/{nfe}NFE__{i}.png"))
 
 
 if __name__ == "__main__":
@@ -146,11 +141,11 @@ if __name__ == "__main__":
     )
 
     sample_sd(
-        "a plain white image",
+        "young Disney socialite wearing a beige miniskirt, dark brown turtleneck sweater, small neckless, cute-fine-face, anime. illustration, realistic shaded perfect face, brown hair, grey eyes, fine details, realistic shaded lighting by ilya kuvshinov giuseppe dangelico pino and michael garmash and rob rey, iamag premiere, wlop matte print, 4k resolution, a masterpiece",
         solver_func=solver_constructor,
         outdir="../../data/sd/test/",
         guidance_scale=7.5,
         ode=False,
-        batch_size=8,
+        batch_size=16,
         negative_prompt=""
     )

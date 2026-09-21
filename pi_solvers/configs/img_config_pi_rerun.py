@@ -18,8 +18,8 @@ def get_config():
 
     # Evaluation
     cfg.metrics = [Metrics.FID]
-    cfg.feature_path = "refs/img_features.pkl"
-    cfg.stats_path = "refs/img_stats.pkl"
+    cfg.feature_path = "refs/img64_features.pkl"
+    cfg.stats_path = "refs/img64_stats.pkl"
     cfg.eval_batch_size = 1024
     cfg.metrics_out = cfg.base_out
 
