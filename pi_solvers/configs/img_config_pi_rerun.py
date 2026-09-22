@@ -31,6 +31,7 @@ def get_config():
             nfe: int,
             ode_threshold: float = 0.05,
             sampler_schedule_path: str | None = None,
+            raw_path: bool = False,
             **sampler_kwargs
     ):
         spec = config_dict.ConfigDict()

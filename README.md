@@ -182,6 +182,9 @@ An example use case is:
 # Evaluate 50000 images generated earlier on the FID, MIND, Precision, and Recall metrics
 evaluate-images -b 512 -n 50000 eval-features data/image_testing/pi/75NFE/images refs/img64_features.pkl \
       --metric MIND --metric FID --metric PrecisionRecall -o data/image_testing/pi/75NFE/data --ref_statistics refs/img64_stats.pkl
+      
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet2/pi_adaptive/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/pi_adaptive/49NFE/data --ref_statistics refs/img64_stats.pkl
 ```
 This evaluates the MIND, FID, Precision, and Recall of the images in the directory `data/image_testing/pi/75NFE/images`
 compared with ImageNet-64 reference statistics, outputting this to an output file in the runs data directory. 
@@ -214,3 +217,60 @@ gaussian-testing 10 200 0.05 5 -g "complex" -o "data/gaussian_experiment/complex
 ```
 This runs the Heun and Euler-Maruyama solver from 10 to 200 NFE, and the PI solver from $\tau_{abs}=0.05$ 
 to $\tau_{abs}=5$. Note that this reproduces Figure 1a from the paper.
+
+
+
+
+
+
+evaluate-images -b 512 -n 50000 eval-features data/image_testing/ggf/75NFE/images refs/img64_features.pkl --metric FID -o data/image_testing/imagenet1/ggf/75NFE/data --ref_statistics refs/img64_stats.pkl
+
+;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/edm_edm/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/edm_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/edm_edm/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/edm_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/euler-maruyama_edm/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/euler-maruyama_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/euler-maruyama_edm/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/euler-maruyama_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/euler-maruyama_edm/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/euler-maruyama_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/ggf_adaptive/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/ggf_adaptive/49NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/ggf_adaptive/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/ggf_adaptive/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/ggf_adaptive/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/ggf_adaptive/99NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/heun_edm/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/heun_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/heun_edm/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/heun_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/heun_edm/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet1/heun_edm/99NFE/data --ref_statistics refs/img64_stats.pkl
+
+
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/edm_edm/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/edm_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/edm_edm/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/edm_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/edm_edm/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/edm_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/euler-maruyama_edm/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/euler-maruyama_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/euler-maruyama_edm/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/euler-maruyama_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/euler-maruyama_edm/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/euler-maruyama_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/ggf_adaptive/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/ggf_adaptive/49NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/ggf_adaptive/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/ggf_adaptive/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/ggf_adaptive/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/ggf_adaptive/99NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/heun_edm/49NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/heun_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/heun_edm/75NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/heun_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
+evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/heun_edm/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet2/heun_edm/99NFE/data --ref_statistics refs/img64_stats.pkl
