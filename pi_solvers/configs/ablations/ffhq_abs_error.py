@@ -64,8 +64,8 @@ def get_config():
         "abs_error": True,
     }
 
-    add_spec("pi", "adaptive", 49, **pi_params(95, 45, 5))
-    add_spec("pi", "adaptive", 75, **pi_params(89, 40, 7))
-    add_spec("pi", "adaptive", 99, **pi_params(70, 35, 10))
+    add_spec("pi", "abs_error", 49, **pi_params(91, 45, 5))
+    add_spec("pi", "abs_error", 75, **pi_params(89, 40, 7))
+    add_spec("pi", "adaptive", 99, **pi_params(67, 35, 10))
 
     return cfg
