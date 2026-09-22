@@ -50,22 +50,22 @@ def get_config():
         cfg.specs.append(spec)
 
     # PI specs
-    sampler_schedule_path = "BitstreamDiffusion/runs/paper/unconditional_text/lm1b/continuous_rate_raw_binary_bits_1M_edm_weighting/evaluation_solver_schedule_nfe_sweep/pi_files/256/_t.csv"
-
-    add_spec("heun", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path, raw_path=True)
-    add_spec("heun", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path, raw_path=True)
-    add_spec("heun", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path, raw_path=True)
-
-    # EDM
-    edm_churn_params = {
-        "S_churn": 40,
-        "S_min": 0.05,
-        "S_max": 50,
-        "S_noise": 1.003
+    pi_params = lambda tau_rel, h_0, n: {
+        "n_ode_steps": n,
+        "ki": 0.3,
+        "kp": 0.1,
+        "tau_a": 0.005,
+        "tau_r": tau_rel,
+        "alpha": 0.9,
+        "h_start": h_0,
+        "max_decrease": 0.2,
+        "max_increase": 5,
+        "max_iter": 1000,
+        "abs_error": True,
     }
 
-    add_spec("edm", "pi-lm1b", 49, sampler_schedule_path=sampler_schedule_path, raw_path=True, **edm_churn_params)
-    add_spec("edm", "pi-lm1b", 75, sampler_schedule_path=sampler_schedule_path, raw_path=True, **edm_churn_params)
-    add_spec("edm", "pi-lm1b", 99, sampler_schedule_path=sampler_schedule_path, raw_path=True, **edm_churn_params)
+    add_spec("pi", "adaptive", 49, **pi_params(95, 45, 5))
+    add_spec("pi", "adaptive", 75, **pi_params(89, 40, 7))
+    add_spec("pi", "adaptive", 99, **pi_params(70, 35, 10))
 
     return cfg
