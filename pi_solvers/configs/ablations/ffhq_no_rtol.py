@@ -63,8 +63,8 @@ def get_config():
         "max_iter": 1000,
     }
 
-    add_spec("pi", "adaptive", 49, **pi_params(10, 45, 5))
-    add_spec("pi", "adaptive", 75, **pi_params(6.3, 40, 7))
-    add_spec("pi", "adaptive", 99, **pi_params(5, 35, 10))
+    add_spec("pi", "adaptive", 49, **pi_params(8.5, 45, 5))
+    add_spec("pi", "adaptive", 75, **pi_params(5.3, 40, 7))
+    add_spec("pi", "adaptive", 99, **pi_params(4.5, 35, 10))
 
     return cfg
