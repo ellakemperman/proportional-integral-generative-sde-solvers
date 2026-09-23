@@ -221,56 +221,10 @@ to $\tau_{abs}=5$. Note that this reproduces Figure 1a from the paper.
 
 
 
-
+nfe-sweep pi_solvers/configs/ffhq_pi_rerun_config.py -d cuda:1 -s 0 -o data/image_testing/ffhq0
 
 evaluate-images -b 512 -n 50000 eval-features data/image_testing/ggf/75NFE/images refs/img64_features.pkl --metric FID -o data/image_testing/imagenet1/ggf/75NFE/data --ref_statistics refs/img64_stats.pkl
 
 ;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/edm_edm/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/edm_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/edm_edm/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/edm_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/euler-maruyama_edm/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/euler-maruyama_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/euler-maruyama_edm/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/euler-maruyama_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/euler-maruyama_edm/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/euler-maruyama_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/ggf_adaptive/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/ggf_adaptive/49NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/ggf_adaptive/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/ggf_adaptive/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/ggf_adaptive/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/ggf_adaptive/99NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/heun_edm/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/heun_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/heun_edm/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/heun_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet1/heun_edm/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet1/heun_edm/99NFE/data --ref_statistics refs/img64_stats.pkl
-
-
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/edm_edm/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/edm_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/edm_edm/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/edm_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/edm_edm/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/edm_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/euler-maruyama_edm/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/euler-maruyama_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/euler-maruyama_edm/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/euler-maruyama_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/euler-maruyama_edm/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/euler-maruyama_edm/99NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/ggf_adaptive/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/ggf_adaptive/49NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/ggf_adaptive/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/ggf_adaptive/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/ggf_adaptive/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/ggf_adaptive/99NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/heun_edm/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/heun_edm/49NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/heun_edm/75NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/heun_edm/75NFE/data --ref_statistics refs/img64_stats.pkl;\
-evaluate-images -b 1024 -n 50000 -d cuda:8 eval-features data/image_testing/imagenet2/heun_edm/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/heun_edm/99NFE/data --ref_statistics refs/img64_stats.pkl
+evaluate-images -b 1024 -n 50000 -d cuda:9 eval-features data/image_testing/imagenet0/edm_pi/99NFE/images refs/img64_features.pkl \
+      --metric FID -o data/image_testing/imagenet0/edm_pi/75NFE/data --ref_statistics refs/img64_stats.pkl

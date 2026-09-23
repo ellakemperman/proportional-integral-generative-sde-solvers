@@ -203,21 +203,23 @@ def main():
 
         print("Evaluating Heun")
         df["heun_nfe"], df["heun_error"] = evaluate_solvers(heun_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+
     else:
         df = pd.read_csv(args.non_adaptive_ref)
 
     print("Evaluating PI")
-    df["pi_nfe"], df["pi_error"] = evaluate_solvers(pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
+    df["pi_nfe"], df["pi_error"] = evaluate_solvers(pi_solvers, x_start, x, reverse_sde, args.seed,
+                                                    n_solvers=args.resolution)
     df["pi_tau"] = pi_evaluation_range
 
     print("Evaluating Heun with PI discretisation")
     if args.pi_discretisation_tau is not None:
         solver = pi_constructor(args.pi_discretisation_tau)
         callback = data_logger.PIDataLogger(args.output + "/", batch_size=args.n_samples, max_iter=args.max_iter)
-        solver.solve(x_start, callback=callback)
+        solver.solve(x_start.clone(), callback=callback)
         callback.write()
 
-        heun_pi_constructor = lambda n_steps: solver_lib.HeunSolver(reverse_sde, get_pi_schedule(n_steps=int(n_steps) // 2, n_ode_steps=0, pi_paths_file=args.output + "/_t.csv", t_max=1, t_min=0, t_ode=0))
+        heun_pi_constructor = lambda n_steps: solver_lib.HeunSolver(reverse_sde, get_pi_schedule(n_steps=int(n_steps) // 2, n_ode_steps=0, pi_paths_file=args.output + "/_t.csv", t_max=1, t_min=0, t_ode=0)[:-1])
         heun_pi_solvers = create_solvers(heun_pi_constructor, em_evaluation_range)
         df["heun_pi_nfe"], df["heun_pi_error"] = evaluate_solvers(heun_pi_solvers, x_start, x, reverse_sde, args.seed, n_solvers=args.resolution)
 

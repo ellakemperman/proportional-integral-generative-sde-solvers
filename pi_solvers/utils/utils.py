@@ -134,6 +134,39 @@ def compute_discretisation_interpolation(
     return t_grid, interpolated
 
 
+def compute_discretisation_rate_interpolation(
+        paths: np.ndarray,
+        num_points: int = 200,
+        t_min: float = 0.05,
+        t_max: float = 80.
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    :param paths: Matrix of paths, where paths that have finished are 0 from that point on
+    :param num_points: Number of points to compute the interpolation at
+    :returns: time grid, the interpolated means, and interpolated variances
+    """
+    t_grid = np.linspace(t_min, t_max, num_points)
+    interpolated = np.empty((paths.shape[0], num_points))
+
+    for i, path in enumerate(paths):
+        # Remove all 0s from the path, as 0s indicate the path is finished
+        end_index = np.where(path <= t_min)[0][0]
+        path = path[:(end_index + 1)]
+
+        if end_index == 1:
+            continue
+
+        path_rate = path[:-1] / (path[:-1] - path[1:])
+
+        # Compute interpolation
+        path_grid = np.linspace(t_min, t_max, path_rate.shape[0])
+        interpolated[i] = np.interp(t_grid, path[:-1][::-1], path_rate[::-1])[::-1]
+        interpolated[i] /= np.sum(interpolated[i])
+
+    print(interpolated[0])
+    return t_grid[::-1], interpolated
+
+
 class ImageSampleDataset(torch.utils.data.Dataset):
 
     def __init__(self, image_dir: str, n_images: int = 0, transform = None):

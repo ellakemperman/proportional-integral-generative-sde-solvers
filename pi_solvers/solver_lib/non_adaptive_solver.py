@@ -23,7 +23,6 @@ class EulerMarayumaSolver(Solver):
         :param discretisation: The time steps :math:`(t_0, t_1, ..., t_n)` the solver will solve the SDE over.
         """
         super().__init__(sde, seed=seed)
-
         self._discretisation = discretisation
         self._time_steps = discretisation[1:] - discretisation[:-1]
 
@@ -108,12 +107,13 @@ def get_pi_schedule(
     if t_ode != t_min:
         n_steps += 1
 
-    _, pi_interpolation = compute_discretisation_interpolation(ts, n_steps + 1, t_min=t_min)
+    _, pi_interpolation = compute_discretisation_interpolation(ts, n_steps + 1, t_min=t_ode)
     pi_schedule = pi_interpolation.mean(axis=0)
     pi_schedule = torch.tensor(pi_schedule)
 
     if t_ode == t_min:
-        return torch.cat([pi_schedule, torch.zeros(1,)])
+        schedule = torch.cat([pi_schedule, torch.zeros(1,)])
+        return schedule
 
     # Add EDM schedule for the last few steps
     edm_end = get_edm_schedule(n_ode_steps, t_min, t_ode)
