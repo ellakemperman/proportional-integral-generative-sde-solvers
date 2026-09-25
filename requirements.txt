@@ -6,3 +6,5 @@ numpy
 requests
 tqdm
 seaborn
+ml-collections
+omegaconf
