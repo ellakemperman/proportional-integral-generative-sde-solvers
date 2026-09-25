@@ -246,7 +246,7 @@ def main():
                         help="Number of images to be generated (default 50000)")
     parser.add_argument("--ode", action='store_true',
                         help="Evaluate on ODE instead of SDE")
-    parser.add_argument("-m", "--model", default="model/edm2-img64-xl-0671088-0.040.pkl", type=str,
+    parser.add_argument("-m", "--model", default="https://nvlabs-fi-cdn.nvidia.com/edm2/posthoc-reconstructions/edm2-img64-xl-0671088-0.040.pkl", type=str,
                         help="Model url. Either a locally downloaded checkpoint loadable with dnnlib or an nvidia model url")
     parser.add_argument("-s", "--seed", default=0, type=int,
                         help="Random seed (default 0)")
@@ -308,16 +308,16 @@ def main():
                            help="Integral constant for step-size control (default 0.3).")
     pi_parser.add_argument("--kp", default=0.1, type=float,
                            help="Proportional constant for step-size control (default 0.1).")
-    pi_parser.add_argument("--tau_a", default=0.1, type=float,
-                           help="Absolute tolerance (default 0.1).")
-    pi_parser.add_argument("--tau_r", default=10, type=float,
-                           help="Relative tolerance. Increasing directly decreases NFE (default 10).")
+    pi_parser.add_argument("--tau_a", default=0.005, type=float,
+                           help="Absolute tolerance (default 0.005).")
+    pi_parser.add_argument("--tau_r", default= 0.87, type=float,
+                           help="Relative tolerance. Increasing directly decreases NFE (default 0.87).")
     pi_parser.add_argument("--alpha", default=0.9, type=float,
                            help="Safety factor (default 0.9)")
-    pi_parser.add_argument("--h_start", default=30, type=float,
-                           help="Starting step size (default 30).")
+    pi_parser.add_argument("--h_start", default=40, type=float,
+                           help="Starting step size (default 40).")
     pi_parser.add_argument("--max_decrease", default=0.2, type=float,
-                           help="Maximum decrease factor in one step of the step size (default 0.05).")
+                           help="Maximum decrease factor in one step of the step size (default 0.2).")
     pi_parser.add_argument("--max_increase", default=5, type=float,
                            help="Maximum increase factor in one step of the step size (default 5).")
     pi_parser.add_argument("--batch_norm", action='store_true',

@@ -6,10 +6,10 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 
-
+# Produces the figures in Figure 5, requires sensitivity_analysis.py to be ran.
 if __name__ == "__main__":
-    path = "../../data/gaussian_test/grid/h_start_complex"
-    var_name = r"$h_0$"
+    path = "../../data/gaussian_experiment/grid/tau_r_complex_test"
+    var_name = r"$\tau_{rel}$"
 
     var = []
     nfe = []
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     plt.ylabel(r"$D_w$", fontsize=15)
     plt.xlabel(var_name, fontsize=15)
     plt.xticks(fontsize=12)
-    plt.ylim(0, 0.25)
+    # plt.ylim(0, 0.25)
     plt.yticks(fontsize=12)
     plt.grid()
-    # plt.savefig(path + "/min_error.png")
+    plt.savefig(path + "/min_error.png")

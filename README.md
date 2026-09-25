@@ -1,4 +1,4 @@
-# Adaptive Second-Order Solvers for Generative Diffusion Sampling
+# Adaptive Second-Order Solvers for Fast Stochastic Diffusion Sampling
 ## By anonymous authors
 This is the implementation of the thesis: Proportional-Integral Time-Step Adaptive Solvers in Diffusion, which implements an adaptive diffusion sampler
 using Proportional Integral (PI) control based on an adaptive solver by [Ilie et al (2015)](https://link.springer.com/article/10.1007/s11075-014-9872-6). 
@@ -8,8 +8,8 @@ Furthermore, this repository has an implementation of several other diffusion sa
 adapt our solver to work with [BitstreamDiffusion](https://arxiv.org/abs/2605.07013), therefore, a fork of this repository is attached, that adds compatibility
 with our sampler and schedule generation methods.
 
-![ImageNet-64_samples](assets/ablations.png)
-
+![img.png](assets/img.png)
+![ablations.png](assets/ablations.png)
 ## Installation
 Ensure your Python version is 3.12. Then, install pytorch 2.10.0 using the installation instructions provided [here](https://pytorch.org/get-started/locally/).
 Preferably, install for CUDA, as otherwise sampling is slow.
@@ -70,6 +70,11 @@ evaluate-images -b 512 gen-features datasets/ffhq -o refs/ffhq_feautures.pkl --s
 ```
 This computes the necessary feature vectors and puts them in the `refs` folder.
 
+### Entropy Schedule
+To run the entropy baseline, download the entropy schedules from the [github](https://github.com/DejanStancevic/Entropic-Time-Schedulers-for-Generative-Diffusion-Models/blob/main/EDM/Schedules/Rescaled_entropic_time_64.pt)
+of the paper Entropic Time Schedules for Generative Diffusion Models. Place the file in the `refs` folder and 
+name it `ret.pt`.
+
 ## Usage
 This repository provides a series of command line tools for easy use. Each has an extensive help menu for exact usage. Each 
 provided command is listed below with its basic usage explained and a usage example. Additionally, we provide a command
@@ -80,9 +85,7 @@ to reproduce the main tables.
 To reproduce the FFHQ (Table 1) results, run
 ```bash
 # FID-NFE sweeps over multiple sampler-schedule configurations
-nfe-sweep pi_solvers/configs/ffhq_pi_rerun_config.py -d cuda:1 -s 0 -o data/image_testing/ffhq0
-nfe-sweep pi_solvers/configs/img_config_entropy.py -d cuda:4 -s 0 -o data/image_testing/imagenet0/
-nfe-sweep pi_solvers/configs/ffhq_pi_rerun_config.py -d cuda:3 -s 100000 -o data/image_testing/ffhq2
+nfe-sweep pi_solvers/configs/ffhq_config.py
 ```
 This will then output the generated images and results to `data/ffhq`
 
@@ -90,11 +93,9 @@ This will then output the generated images and results to `data/ffhq`
 To reproduce the ImageNet-64 (Table 1) results, run
 ```bash
 # FID-NFE sweeps over multiple sampler-schedule configurations
-nfe-sweep pi_solvers/configs/img_config_pi_rerun.py -d cuda:0 -s 0 -o data/image_testing/imagenet0
-nfe-sweep pi_solvers/configs/img_config_pi_rerun.py -d cuda:1 -s 50000 -o data/image_testing/imagenet1
-nfe-sweep pi_solvers/configs/img_config_pi_rerun.py -d cuda:2 -s 100000 -o data/image_testing/imagenet2
+nfe-sweep pi_solvers/configs/img_config.py
 ```
-This will then output the generated images and results to `data/ffhq`
+This will then output the generated images and results to `data/imagenet`
 
 #### LM1B
 To reproduce the LM1B results (Table 2), run 
@@ -128,14 +129,11 @@ tolerance-grid-search -h
 An example usage of this command is:
 ```bash
 # Tolerance grid search example command
-tolerance-grid-search 0.01 0.1 10 50 20 "data/tolerance_grid/test" --metric MIND --ref refs/img64_features.pkl \
+tolerance-grid-search 0.005 0.1 1 2 20 "data/tolerance_grid/test" --metric MIND --ref refs/img64_features.pkl \
   --model https://nvlabs-fi-cdn.nvidia.com/edm2/posthoc-reconstructions/edm2-img64-xl-0671088-0.040.pkl 
-  
-tolerance-grid-search 0.05 1 0.1 2 20 "data/tolerance_grid/ffhq_biggrid" --metric MIND --ref refs/FFHQ_features.pkl \
---model https://nvlabs-fi-cdn.nvidia.com/edm/pretrained/edm-ffhq-64x64-uncond-ve.pkl --use_cache
 ```
-Which uses the EDM2-XL-FID checkpoint to generate Imagenet-64 images an a tolerance grid of $\tau_{abs}\in[0.01, 0.1]$ and
-$\tau_{rel}\in[10, 50]$ on a grid with resolution 20, computing the MIND metric.
+Which uses the EDM2-XL-FID checkpoint to generate Imagenet-64 images an a tolerance grid of $\tau_{abs}\in[0.005, 0.1]$ and
+$\tau_{rel}\in[0.1, 2]$ on a grid with resolution 20, computing the MIND metric.
 
 ### Image Generation
 This tool is for generating image samples. Note that this tool currently only generates using models that are compatible
@@ -154,13 +152,13 @@ Filling in `SOLVER_NAME` with the name of the solver you want to use.
 An example usage of this command is:
 ```bash
 # Generate 50000 images using the PI solver at 75 NFE
-generate-images -b 48 -o data/image_testing/pi/75NFE -n 50000 -m https://nvlabs-fi-cdn.nvidia.com/edm2/posthoc-reconstructions/edm2-img64-xl-0671088-0.040.pkl \
-  pi --tau_a 0.06 --tau_r 14.5 --h_start 40
+generate-images -b 128 -o data/imagenet/pi_adaptive/75NFE -n 50000 -m https://nvlabs-fi-cdn.nvidia.com/edm2/posthoc-reconstructions/edm2-img64-xl-0671088-0.040.pkl \
+  pi --tau_a 0.005 --tau_r 0.87 --h_start 40
 ```
-This runs the PI solver with a batch size of 48, generating 50000 images and outputting these, and information on the run,
-to `data/image_testing/pi/75NFE`. Note that each PI solver command will output a file to a new data directory at the
+This runs the PI solver with a batch size of 128, generating 50000 images and outputting these, and information on the run,
+to `data/imagenet/pi_adaptive/75NFE`. Note that each PI solver command will output a file to a new data directory at the
 output path named `_t.csv`. This csv file can be used as the input to compute an average PI discretisation, which can
-be added using the `--pi_discretisation` flag on the EDM, EM, or heun solver.
+be added using the `--pi_discretisation` flag on the EDM or EM solver.
 
 ### Metric Evaluation
 This tool is for evaluating metrics such as the FID on images generated by the `generate-images` tool.
@@ -180,14 +178,12 @@ evaluate-images eval-features -h
 An example use case is:
 ```bash
 # Evaluate 50000 images generated earlier on the FID, MIND, Precision, and Recall metrics
-evaluate-images -b 512 -n 50000 eval-features data/image_testing/pi/75NFE/images refs/img64_features.pkl \
-      --metric MIND --metric FID --metric PrecisionRecall -o data/image_testing/pi/75NFE/data --ref_statistics refs/img64_stats.pkl
-      
-evaluate-images -b 1024 -n 50000 -d cuda:7 eval-features data/image_testing/imagenet2/pi_adaptive/49NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet2/pi_adaptive/49NFE/data --ref_statistics refs/img64_stats.pkl
+evaluate-images -b 1024 -n 50000 eval-features data/imagenet/pi_adaptive/75NFE/images refs/img64_features.pkl \
+      --metric MIND --metric FID --metric PrecisionRecall -o data/imagenet/pi_adaptive/75NFE/data --ref_statistics refs/img64_stats.pkl
 ```
-This evaluates the MIND, FID, Precision, and Recall of the images in the directory `data/image_testing/pi/75NFE/images`
-compared with ImageNet-64 reference statistics, outputting this to an output file in the runs data directory. 
+This evaluates the MIND, FID, Precision, and Recall of the images in the directory `data/imagenet/pi_adaptive/75NFE/images`
+compared with ImageNet-64 reference statistics, outputting this to an output file in the runs data directory. This 
+reproduces Figure 4 of the paper.
 
 ### Create Image Sample
 This is a very simple tool, used to generate sample images, used to e.g. show samples in a paper. Usage
@@ -213,18 +209,7 @@ gaussian-testing -h
 An example use case is:
 ```bash
 # Run Gaussian tests on a complex Gaussian
-gaussian-testing 10 200 0.05 5 -g "complex" -o "data/gaussian_experiment/complex/" --h_start 0.15
+gaussian-testing 10 200 0.01 1 -g "complex" -o "data/gaussian_experiment/complex/" --h_start 0.15
 ```
-This runs the Heun and Euler-Maruyama solver from 10 to 200 NFE, and the PI solver from $\tau_{abs}=0.05$ 
-to $\tau_{abs}=5$. Note that this reproduces Figure 1a from the paper.
-
-
-
-
-nfe-sweep pi_solvers/configs/ffhq_pi_rerun_config.py -d cuda:1 -s 0 -o data/image_testing/ffhq0
-
-evaluate-images -b 512 -n 50000 eval-features data/image_testing/ggf/75NFE/images refs/img64_features.pkl --metric FID -o data/image_testing/imagenet1/ggf/75NFE/data --ref_statistics refs/img64_stats.pkl
-
-;\
-evaluate-images -b 1024 -n 50000 -d cuda:9 eval-features data/image_testing/imagenet0/edm_pi/99NFE/images refs/img64_features.pkl \
-      --metric FID -o data/image_testing/imagenet0/edm_pi/75NFE/data --ref_statistics refs/img64_stats.pkl
+This runs the Heun and Euler-Maruyama solver from 10 to 200 NFE, and the PI solver from $\tau_{abs}=0.01$ 
+to $\tau_{abs}=1$. Note that this reproduces Figure 1a from the paper.

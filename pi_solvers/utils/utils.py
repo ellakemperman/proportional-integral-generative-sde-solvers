@@ -156,14 +156,11 @@ def compute_discretisation_rate_interpolation(
         if end_index == 1:
             continue
 
-        path_rate = path[:-1] / (path[:-1] - path[1:])
+        path_rate = 1 / (path.shape[0] * (path[:-1] - path[1:]))
 
         # Compute interpolation
-        path_grid = np.linspace(t_min, t_max, path_rate.shape[0])
         interpolated[i] = np.interp(t_grid, path[:-1][::-1], path_rate[::-1])[::-1]
-        interpolated[i] /= np.sum(interpolated[i])
 
-    print(interpolated[0])
     return t_grid[::-1], interpolated
 
 

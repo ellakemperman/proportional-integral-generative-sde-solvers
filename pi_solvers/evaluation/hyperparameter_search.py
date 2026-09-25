@@ -19,7 +19,7 @@ from pi_solvers.utils import plot_images, load_edm_checkpoint
 from pi_solvers.utils.data_logger import RejectCounter
 from pi_solvers.evaluation import feature_vector, metrics
 
-
+plt.style.use("science")
 class Rater(ABC):
 
     @abstractmethod
@@ -130,12 +130,11 @@ def plot_grid(
         gamma: float = 1
 ):
     # Create and save plots
-    plt.figure()
-    plt.style.use("science")
+    plt.figure(figsize=(5, 4))
     mesh = plt.pcolormesh(grid[0], grid[1], data, cmap='inferno', norm=PowerNorm(gamma=gamma))
     plt.colorbar(mesh, label=f'{name}')
-    plt.xlabel(r"$\tau_a$", fontsize=15)
-    plt.ylabel(r"$\tau_r$", fontsize=15)
+    plt.xlabel(r"$\tau_{abs}$", fontsize=15)
+    plt.ylabel(r"$\tau_{rel}$", fontsize=15)
     if not title:
         title = rf"{name} as a function of $\tau_a$ and $\tau_r$"
     # plt.title(title)

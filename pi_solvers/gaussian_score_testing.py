@@ -51,6 +51,15 @@ def create_solvers(
         yield constructor(param)
 
 
+def bifurcation_gaussian(sde: sde_lib.LinearDriftSDE):
+    gaussians_ = (
+        gaussians.Gaussian(mu=-1, sigma=0.1, weight=0.5),
+        gaussians.Gaussian(mu=1, sigma=0.1, weight=0.5),
+    )
+    return gaussians.MultiGaussian(tuple(gaussians_), sde)
+
+
+
 def simple_gaussian(sde: sde_lib.LinearDriftSDE):
     n = 10
     mus = lambda i: 2 * i - n

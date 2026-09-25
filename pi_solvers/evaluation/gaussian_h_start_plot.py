@@ -4,9 +4,9 @@ from scipy.signal import savgol_filter
 import pandas as pd
 import numpy as np
 
-
+# Produces Figure 6, requires sensitivity_analysis.py to be ran.
 if __name__ == "__main__":
-    path = "../../data/gaussian_test/grid/h_start_complex"
+    path = "../../data/gaussian_experiment/grid/h_start_complex_test"
     hs = [0.01, 0.05, 0.1, 0.15, 0.2]
 
 
@@ -25,5 +25,5 @@ if __name__ == "__main__":
     plt.ylabel(r"$D_W$")
     plt.yscale("log")
     plt.legend()
-    plt.show()
+    plt.savefig(path + "/plot.png")
 
